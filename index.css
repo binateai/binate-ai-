@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Fix for settings page layout issues */
+.settings-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 768px) {
+  .settings-container {
+    margin-left: 0;
+    max-width: calc(100% - 240px);
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

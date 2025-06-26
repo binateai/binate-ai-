@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #e1e1e1;
+            border-radius: 5px;
+        }
+        h1 {
+            color: #333;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .navigation {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .navigation a {
+            text-decoration: none;
+            padding: 8px 15px;
+            background-color: #f0f0f0;
+            color: #333;
+            border-radius: 4px;
+        }
+        .navigation a:hover {
+            background-color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Binate AI - Server Connection Test</h1>
+        
+        <div id="serverStatus" class="status">Checking server status...</div>
+        
+        <button id="checkApiBtn">Check API Status</button>
+        <button id="checkAuthBtn">Check Auth Status</button>
+        
+        <div class="navigation">
+            <h3>Navigation Links</h3>
+            <div>
+                <a href="/">Dashboard</a>
+                <a href="/auth">Authentication</a>
+                <a href="/settings">Settings</a>
+                <a href="/google-test">Google Test</a>
+            </div>
+        </div>
+        
+        <div id="results" style="margin-top: 20px; white-space: pre-wrap;"></div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusDiv = document.getElementById('serverStatus');
+            const resultsDiv = document.getElementById('results');
+            
+            // Initial server check
+            fetch('/')
+                .then(response => {
+                    if (response.ok) {
+                        statusDiv.classList.add('success');
+                        statusDiv.textContent = 'Server is reachable! Status: ' + response.status;
+                    } else {
+                        statusDiv.classList.add('error');
+                        statusDiv.textContent = 'Server returned error: ' + response.status;
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    resultsDiv.textContent = 'Server response received. Length: ' + html.length + ' bytes';
+                })
+                .catch(error => {
+                    statusDiv.classList.add('error');
+                    statusDiv.textContent = 'Cannot connect to server: ' + error.message;
+                });
+            
+            // API check button
+            document.getElementById('checkApiBtn').addEventListener('click', () => {
+                resultsDiv.textContent = 'Checking API...';
+                fetch('/api/healthcheck')
+                    .then(response => response.json())
+                    .then(data => {
+                        resultsDiv.textContent = 'API response: ' + JSON.stringify(data, null, 2);
+                    })
+                    .catch(error => {
+                        resultsDiv.textContent = 'API error: ' + error.message;
+                    });
+            });
+            
+            // Auth check button
+            document.getElementById('checkAuthBtn').addEventListener('click', () => {
+                resultsDiv.textContent = 'Checking authentication...';
+                fetch('/api/user', { credentials: 'include' })
+                    .then(response => {
+                        if (response.ok) {
+                            return response.json();
+                        } else {
+                            throw new Error('Not authenticated. Status: ' + response.status);
+                        }
+                    })
+                    .then(data => {
+                        resultsDiv.textContent = 'Authenticated as: ' + JSON.stringify(data, null, 2);
+                    })
+                    .catch(error => {
+                        resultsDiv.textContent = 'Auth error: ' + error.message;
+                    });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Binate AI - Your Intelligent Executive Assistant</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9fafb;
+      color: #1f2937;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background-color: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #4f46e5;
+    }
+    nav a {
+      margin-left: 1.5rem;
+      color: #4b5563;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    nav a:hover {
+      color: #4f46e5;
+    }
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 4rem 2rem;
+      background-color: #f3f4f6;
+    }
+    h1 {
+      font-size: 3rem;
+      color: #111827;
+      margin-bottom: 1rem;
+    }
+    p.lead {
+      font-size: 1.25rem;
+      color: #4b5563;
+      max-width: 600px;
+      margin-bottom: 2rem;
+    }
+    .cta-button {
+      display: inline-block;
+      background-color: #4f46e5;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background-color 0.2s;
+    }
+    .cta-button:hover {
+      background-color: #4338ca;
+    }
+    .features {
+      padding: 4rem 2rem;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+    .feature-card {
+      background-color: white;
+      padding: 2rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .feature-title {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: #111827;
+    }
+    .feature-text {
+      color: #6b7280;
+    }
+    footer {
+      background-color: #1f2937;
+      color: #e5e7eb;
+      padding: 2rem;
+      text-align: center;
+    }
+    /* Loading animation for app transition */
+    .app-loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #f9fafb;
+      z-index: 1000;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .loader {
+      width: 48px;
+      height: 48px;
+      border: 5px solid #e5e7eb;
+      border-bottom-color: #4f46e5;
+      border-radius: 50%;
+      animation: rotation 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+    @keyframes rotation {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+  <script>
+    // Script to handle navigation and app loading
+    document.addEventListener('DOMContentLoaded', function() {
+      // Handle navigation to app
+      const appLinks = document.querySelectorAll('[data-app-link]');
+      appLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          const path = this.getAttribute('href');
+          
+          // Show loading screen
+          const loading = document.querySelector('.app-loading');
+          loading.style.display = 'flex';
+          
+          // Redirect to app path
+          setTimeout(() => {
+            window.location.href = path;
+          }, 500);
+        });
+      });
+      
+      // Check if we should redirect to the app
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectParam = urlParams.get('redirect');
+      if (redirectParam) {
+        // Show loading and redirect
+        const loading = document.querySelector('.app-loading');
+        loading.style.display = 'flex';
+        
+        setTimeout(() => {
+          window.location.href = redirectParam;
+        }, 500);
+      }
+      
+      // Check if we're not on the root path
+      if (window.location.pathname !== '/' && !window.location.pathname.startsWith('/api/')) {
+        // Redirect to app
+        window.location.href = '/app/dashboard';
+      }
+    });
+  </script>
+</head>
+<body>
+  <!-- Loading overlay for app transitions -->
+  <div class="app-loading">
+    <div class="loader"></div>
+    <p>Loading Binate AI...</p>
+  </div>
+
+  <!-- Static landing page content -->
+  <header>
+    <div class="logo">Binate AI</div>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#about">About</a>
+      <a href="/app/dashboard" data-app-link>Dashboard</a>
+      <a href="/auth" data-app-link>Login</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Your Intelligent Executive Assistant</h1>
+      <p class="lead">Binate AI delivers comprehensive workflow automation with advanced multi-platform integrations and smart user experience design.</p>
+      <a href="/app/dashboard" class="cta-button" data-app-link>Get Started</a>
+    </section>
+
+    <section id="features" class="features container">
+      <h2>Key Features</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3 class="feature-title">Email Management</h3>
+          <p class="feature-text">Intelligently processes emails, categorizes them, and takes appropriate actions based on content.</p>
+        </div>
+        <div class="feature-card">
+          <h3 class="feature-title">Calendar Integration</h3>
+          <p class="feature-text">Manages your schedule, creates events, and sends reminders for important meetings.</p>
+        </div>
+        <div class="feature-card">
+          <h3 class="feature-title">Task Automation</h3>
+          <p class="feature-text">Creates and tracks tasks, setting priorities and deadlines based on context.</p>
+        </div>
+        <div class="feature-card">
+          <h3 class="feature-title">Invoice Processing</h3>
+          <p class="feature-text">Handles invoices and expenses, organizing financial documents for easy retrieval.</p>
+        </div>
+        <div class="feature-card">
+          <h3 class="feature-title">Lead Management</h3>
+          <p class="feature-text">Identifies potential leads from communications and helps manage customer relationships.</p>
+        </div>
+        <div class="feature-card">
+          <h3 class="feature-title">Daily Digests</h3>
+          <p class="feature-text">Delivers personalized updates three times daily with your most important information.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Binate AI. All rights reserved.</p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google OAuth External Login</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #4285f4;
+            margin-top: 0;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #4285f4;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin: 10px 0;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #3367d6;
+        }
+        .google-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            color: #737373;
+            border: 1px solid #dddddd;
+            padding: 10px 16px;
+            margin: 20px auto;
+            max-width: 300px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .google-btn img {
+            margin-right: 12px;
+            width: 24px;
+            height: 24px;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4caf50;
+        }
+        .error {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        .steps {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .step {
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .step-number {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background-color: #4285f4;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            margin-right: 10px;
+        }
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4285f4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Google OAuth External Login</h1>
+        <p>This standalone page tests Google authentication without requiring an existing Binate account. The tool will:</p>
+        <ol>
+            <li>Get a login URL from the backend</li>
+            <li>Open a popup window for Google authentication</li>
+            <li>Process the authorization code to get tokens</li>
+            <li>Show user information from Google</li>
+        </ol>
+        
+        <div class="google-btn" id="google-login">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
+            <span>Sign in with Google</span>
+        </div>
+        
+        <div id="result"></div>
+        
+        <div class="steps">
+            <h2>Manual Test Steps</h2>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Get Auth URL:</strong>
+                <button id="get-auth-url" class="btn">Generate Auth URL</button>
+                <div id="auth-url-result"></div>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Process Authorization Code:</strong>
+                <p>After clicking the Google URL, you'll be redirected back. Enter the code from the URL:</p>
+                <input type="text" id="auth-code" placeholder="Enter authorization code" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                <button id="process-code" class="btn">Process Code</button>
+                <div id="process-result"></div>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Tokens & User Info:</strong>
+                <div id="tokens-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let authWindow;
+            let authUrl;
+            
+            // Function to show a loading spinner
+            const showLoading = (elementId) => {
+                const element = document.getElementById(elementId);
+                element.innerHTML = `
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading...</p>
+                    </div>
+                `;
+            };
+            
+            // Function to show a success message
+            const showSuccess = (elementId, message) => {
+                const element = document.getElementById(elementId);
+                element.innerHTML = `
+                    <div class="result success">
+                        <h3>Success</h3>
+                        <p>${message}</p>
+                    </div>
+                `;
+            };
+            
+            // Function to show an error message
+            const showError = (elementId, message) => {
+                const element = document.getElementById(elementId);
+                element.innerHTML = `
+                    <div class="result error">
+                        <h3>Error</h3>
+                        <p>${message}</p>
+                    </div>
+                `;
+            };
+            
+            // Step 1: Get Auth URL button
+            document.getElementById('get-auth-url').addEventListener('click', async () => {
+                try {
+                    showLoading('auth-url-result');
+                    
+                    // Get auth URL from backend
+                    const response = await fetch('/api/debug/google/auth');
+                    const data = await response.json();
+                    
+                    authUrl = data.authUrl;
+                    
+                    if (authUrl) {
+                        document.getElementById('auth-url-result').innerHTML = `
+                            <div class="result success">
+                                <h3>Auth URL Generated</h3>
+                                <p><a href="${authUrl}" target="_blank">Click here to open auth URL</a></p>
+                                <pre>${authUrl}</pre>
+                            </div>
+                        `;
+                    } else {
+                        showError('auth-url-result', data.error || 'Failed to generate auth URL');
+                    }
+                } catch (error) {
+                    showError('auth-url-result', error.message);
+                }
+            });
+            
+            // Step 2: Process Code button
+            document.getElementById('process-code').addEventListener('click', async () => {
+                try {
+                    const code = document.getElementById('auth-code').value.trim();
+                    
+                    if (!code) {
+                        showError('process-result', 'Please enter an authorization code');
+                        return;
+                    }
+                    
+                    showLoading('process-result');
+                    
+                    // Exchange code for tokens
+                    const response = await fetch('/api/debug/token-exchange', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ code })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showSuccess('process-result', 'Authorization code processed successfully!');
+                        
+                        // Display token information
+                        document.getElementById('tokens-result').innerHTML = `
+                            <div class="result success">
+                                <h3>Token Information</h3>
+                                <p><strong>Access Token:</strong> ${data.access_token ? `${data.access_token.substring(0, 10)}...` : 'None'}</p>
+                                <p><strong>Refresh Token:</strong> ${data.refresh_token ? 'Present' : 'None'}</p>
+                                <p><strong>Expires:</strong> ${new Date(data.expiry_date).toLocaleString()}</p>
+                                
+                                <div style="margin-top: 20px;">
+                                    <h4>Test the token:</h4>
+                                    <button id="test-token" class="btn">Get User Info</button>
+                                    <div id="user-info-result"></div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Add event listener to the test token button
+                        document.getElementById('test-token').addEventListener('click', async () => {
+                            try {
+                                showLoading('user-info-result');
+                                
+                                // Test the token
+                                const testResponse = await fetch('/api/debug/test-token', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ token: data.access_token })
+                                });
+                                
+                                const testData = await testResponse.json();
+                                
+                                if (testData.success) {
+                                    document.getElementById('user-info-result').innerHTML = `
+                                        <div class="result success">
+                                            <h3>User Information</h3>
+                                            <p><strong>Email:</strong> ${testData.email}</p>
+                                            <p><strong>Name:</strong> ${testData.name}</p>
+                                            ${testData.picture ? `<p><strong>Picture:</strong><br><img src="${testData.picture}" width="100"></p>` : ''}
+                                        </div>
+                                    `;
+                                } else {
+                                    showError('user-info-result', testData.error || 'Failed to get user information');
+                                }
+                            } catch (error) {
+                                showError('user-info-result', error.message);
+                            }
+                        });
+                    } else {
+                        showError('process-result', data.error || 'Failed to process authorization code');
+                    }
+                } catch (error) {
+                    showError('process-result', error.message);
+                }
+            });
+            
+            // Google login button - one-click flow
+            document.getElementById('google-login').addEventListener('click', async () => {
+                try {
+                    showLoading('result');
+                    
+                    // Get the auth URL
+                    const urlResponse = await fetch('/api/debug/google/auth');
+                    const urlData = await urlResponse.json();
+                    
+                    if (!urlData.authUrl) {
+                        showError('result', urlData.error || 'Failed to generate authentication URL');
+                        return;
+                    }
+                    
+                    // Open the popup window
+                    const width = 600;
+                    const height = 700;
+                    const left = (window.innerWidth - width) / 2;
+                    const top = (window.innerHeight - height) / 2;
+                    
+                    authWindow = window.open(
+                        urlData.authUrl,
+                        'googleAuth',
+                        `width=${width},height=${height},top=${top},left=${left}`
+                    );
+                    
+                    if (!authWindow) {
+                        showError('result', 'Popup blocked! Please allow popups for this site.');
+                        return;
+                    }
+                    
+                    // Listen for messages from the popup
+                    window.addEventListener('message', async (event) => {
+                        // Ensure the message is from our domain
+                        if (event.origin !== window.location.origin) {
+                            return;
+                        }
+                        
+                        const { type, code, error, email } = event.data;
+                        
+                        if (type === 'GOOGLE_AUTH_SUCCESS' && code) {
+                            // We received an authorization code
+                            document.getElementById('result').innerHTML = `
+                                <div class="result success">
+                                    <h3>Authorization Code Received</h3>
+                                    <p>Code: ${code.substring(0, 10)}...</p>
+                                    <div class="loading-spinner"></div>
+                                    <p>Exchanging for tokens...</p>
+                                </div>
+                            `;
+                            
+                            try {
+                                // Exchange the code for tokens
+                                const tokenResponse = await fetch('/api/debug/token-exchange', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ code })
+                                });
+                                
+                                const tokenData = await tokenResponse.json();
+                                
+                                if (tokenData.success && tokenData.access_token) {
+                                    // Test the access token
+                                    const userResponse = await fetch('/api/debug/test-token', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({ token: tokenData.access_token })
+                                    });
+                                    
+                                    const userData = await userResponse.json();
+                                    
+                                    if (userData.success) {
+                                        document.getElementById('result').innerHTML = `
+                                            <div class="result success">
+                                                <h3>Authentication Successful!</h3>
+                                                <p><strong>Email:</strong> ${userData.email}</p>
+                                                <p><strong>Name:</strong> ${userData.name}</p>
+                                                ${userData.picture ? `<p><img src="${userData.picture}" width="100" style="border-radius: 50%;"></p>` : ''}
+                                                <p><strong>Access Token:</strong> ${tokenData.access_token.substring(0, 10)}...</p>
+                                                <p><strong>Refresh Token:</strong> ${tokenData.refresh_token ? 'Received' : 'Not received'}</p>
+                                                <p><strong>Token Expires:</strong> ${new Date(tokenData.expiry_date).toLocaleString()}</p>
+                                            </div>
+                                        `;
+                                        
+                                        // Also update the manual steps
+                                        document.getElementById('auth-code').value = code;
+                                        document.getElementById('process-result').innerHTML = `
+                                            <div class="result success">
+                                                <p>Code processed successfully!</p>
+                                            </div>
+                                        `;
+                                        document.getElementById('tokens-result').innerHTML = `
+                                            <div class="result success">
+                                                <h3>Token Information</h3>
+                                                <p><strong>Access Token:</strong> ${tokenData.access_token.substring(0, 10)}...</p>
+                                                <p><strong>Refresh Token:</strong> ${tokenData.refresh_token ? 'Present' : 'None'}</p>
+                                                <p><strong>Expires:</strong> ${new Date(tokenData.expiry_date).toLocaleString()}</p>
+                                                <p><strong>User Email:</strong> ${userData.email}</p>
+                                                <p><strong>User Name:</strong> ${userData.name}</p>
+                                                ${userData.picture ? `<p><img src="${userData.picture}" width="100" style="border-radius: 50%;"></p>` : ''}
+                                            </div>
+                                        `;
+                                    } else {
+                                        showError('result', `Token valid but failed to get user info: ${userData.error}`);
+                                    }
+                                } else {
+                                    showError('result', `Failed to exchange code for tokens: ${tokenData.error}`);
+                                }
+                            } catch (exchangeError) {
+                                showError('result', `Error exchanging code: ${exchangeError.message}`);
+                            }
+                        } else if (type === 'GOOGLE_AUTH_SUCCESS' && email) {
+                            // We're already logged in and received user info directly
+                            showSuccess('result', `Connected to Google account: ${email}`);
+                        } else if (type === 'GOOGLE_AUTH_ERROR') {
+                            showError('result', error || 'Authentication failed');
+                        }
+                    });
+                    
+                    // Check if the popup was closed without sending a message
+                    const checkClosed = setInterval(() => {
+                        if (authWindow.closed) {
+                            clearInterval(checkClosed);
+                            document.getElementById('result').innerHTML = `
+                                <div class="result error">
+                                    <h3>Authentication Cancelled</h3>
+                                    <p>The authentication window was closed without completing the process.</p>
+                                </div>
+                            `;
+                        }
+                    }, 1000);
+                    
+                } catch (error) {
+                    showError('result', error.message);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

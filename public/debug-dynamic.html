@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Google OAuth Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #1a73e8;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .info-box {
+            background-color: #e8f0fe;
+            border-left: 4px solid #1a73e8;
+            padding: 12px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .warning-box {
+            background-color: #fff3e0;
+            border-left: 4px solid #f57c00;
+            padding: 12px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+        code {
+            background-color: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .log-area {
+            border: 1px solid #ddd;
+            padding: 15px;
+            min-height: 100px;
+            background-color: #f9f9f9;
+            overflow-y: auto;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            font-family: monospace;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dynamic Google OAuth Debug Tool</h1>
+    
+    <div class="info-box">
+        <p>This debug tool automatically detects your current origin and uses it for the Google OAuth flow. This helps avoid redirect URI mismatches.</p>
+        <p><strong>Detected callback URL:</strong> <code data-redirect-uri></code></p>
+    </div>
+    
+    <div class="warning-box">
+        <p>Make sure this exact callback URL is configured in your Google Cloud console for the OAuth Client ID.</p>
+    </div>
+    
+    <div>
+        <h3>Step 1: Start OAuth Flow</h3>
+        <p>Click the button below to initiate the Google OAuth flow with dynamic redirect detection:</p>
+        <button id="start-oauth">Connect Google Account</button>
+    </div>
+    
+    <div>
+        <h3>Log</h3>
+        <div id="log-area" class="log-area"></div>
+    </div>
+    
+    <script src="/js/dynamic-redirect.js"></script>
+    <script>
+        const logArea = document.getElementById('log-area');
+        
+        function logMessage(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `${new Date().toISOString().split('T')[1].split('.')[0]} - ${message}`;
+            logArea.appendChild(entry);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+        
+        document.getElementById('start-oauth').addEventListener('click', async () => {
+            try {
+                logMessage('Requesting Google authorization URL from backend...');
+                
+                // Get the auth URL from your backend
+                const response = await fetch('/api/auth/google');
+                
+                if (!response.ok) {
+                    throw new Error(`Backend responded with status ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.authUrl) {
+                    throw new Error('No authorization URL returned from backend');
+                }
+                
+                logMessage(`Got auth URL, redirecting to Google consent screen...`);
+                
+                // Navigate to the Google authorization URL
+                window.location.href = data.authUrl;
+                
+            } catch (error) {
+                logMessage(`Error: ${error.message}`, 'error');
+                console.error('OAuth error:', error);
+            }
+        });
+        
+        // Check if there's an error or success parameter in the URL (after redirect back)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('error')) {
+            logMessage(`OAuth Error: ${urlParams.get('error')}`, 'error');
+            if (urlParams.has('error_description')) {
+                logMessage(`Error details: ${urlParams.get('error_description')}`, 'error');
+            }
+        } else if (urlParams.has('success')) {
+            logMessage(`OAuth Success: ${urlParams.get('success')}`, 'success');
+        } else if (urlParams.has('code')) {
+            logMessage(`Received authorization code from Google (length: ${urlParams.get('code').length})`, 'success');
+            logMessage('Waiting for backend to process the code...');
+        }
+        
+        // Log initial state
+        logMessage('Debug tool initialized');
+        logMessage(`Current origin: ${window.location.origin}`);
+        logMessage(`Callback URL: ${getCallbackUrl()}`);
+    </script>
+</body>
+</html>

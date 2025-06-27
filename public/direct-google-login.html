@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Google Login</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f7f7f7;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #4285f4;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 30px;
+        }
+
+        button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #357ae8;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #f44336;
+        }
+
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #4caf50;
+        }
+
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 300px;
+            font-size: 14px;
+        }
+
+        .google-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            color: #737373;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px 15px;
+            font-weight: 500;
+            width: 240px;
+            margin: 20px auto;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .google-button:hover {
+            background-color: #f8f8f8;
+        }
+
+        .google-button img {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            border-top-color: #4285f4;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            border-bottom: 2px solid #4285f4;
+            font-weight: 500;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Direct Google Login</h1>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="simple">Simple Flow</div>
+            <div class="tab" data-tab="advanced">Advanced Debugging</div>
+        </div>
+        
+        <div class="tab-content active" id="simple-tab">
+            <p>This tool attempts to log in with Google directly, bypassing the usual flow and using the <code>/api/google-auth-direct</code> endpoint.</p>
+            
+            <div class="google-button" id="google-login">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
+                <span>Sign in with Google</span>
+            </div>
+            
+            <div id="login-result"></div>
+        </div>
+        
+        <div class="tab-content" id="advanced-tab">
+            <h2>Advanced Debugging Tools</h2>
+            
+            <div class="card">
+                <h3>Step 1: Get OAuth URL</h3>
+                <button id="get-url">Generate URL</button>
+                <div id="url-result"></div>
+            </div>
+            
+            <div class="card">
+                <h3>Step 2: Examine Environment</h3>
+                <button id="check-env">Check Environment</button>
+                <div id="env-result"></div>
+            </div>
+            
+            <div class="card">
+                <h3>Step 3: Verify Client IDs</h3>
+                <button id="check-client-ids">Compare Client IDs</button>
+                <div id="client-ids-result"></div>
+            </div>
+            
+            <div class="card">
+                <h3>Step 4: Manual Token Exchange</h3>
+                <p>Paste the authorization code from the URL:</p>
+                <input type="text" id="auth-code" placeholder="Enter code here" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                <button id="exchange-code">Exchange Code</button>
+                <div id="exchange-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Tab functionality
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(tc => tc.classList.remove('active'));
+                    
+                    // Add active class to clicked tab
+                    tab.classList.add('active');
+                    const tabId = `${tab.dataset.tab}-tab`;
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Helper function to show loading state
+            const showLoading = (elementId) => {
+                const element = document.getElementById(elementId);
+                element.innerHTML = '<div class="loading"></div> Loading...';
+            };
+            
+            // Helper function to show error
+            const showError = (elementId, message) => {
+                const element = document.getElementById(elementId);
+                element.innerHTML = `<div class="result error"><p>${message}</p></div>`;
+            };
+            
+            // Helper function to show success
+            const showSuccess = (elementId, message, data = null) => {
+                const element = document.getElementById(elementId);
+                let html = `<div class="result success"><p>${message}</p>`;
+                if (data) {
+                    html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+                html += '</div>';
+                element.innerHTML = html;
+            };
+            
+            // Simple Flow: Google Login Button
+            document.getElementById('google-login').addEventListener('click', async () => {
+                try {
+                    showLoading('login-result');
+                    
+                    // Fetch the direct auth URL
+                    const response = await fetch('/api/google-auth-direct');
+                    const data = await response.json();
+                    
+                    if (!data.authUrl) {
+                        showError('login-result', `Failed to get auth URL: ${data.error || 'Unknown error'}`);
+                        return;
+                    }
+                    
+                    // Open the popup for authentication
+                    const authWindow = window.open(
+                        data.authUrl,
+                        'googleAuthWindow',
+                        'width=600,height=700,top=100,left=100'
+                    );
+                    
+                    if (!authWindow) {
+                        showError('login-result', 'Popup blocked. Please allow popups for this site.');
+                        return;
+                    }
+                    
+                    // Listen for messages from the popup
+                    window.addEventListener('message', (event) => {
+                        // Make sure message is from our domain
+                        if (event.origin !== window.location.origin) {
+                            return;
+                        }
+                        
+                        const messageData = event.data;
+                        
+                        if (messageData.type === 'GOOGLE_AUTH_SUCCESS') {
+                            if (messageData.email) {
+                                showSuccess('login-result', `Successfully connected with Google account: ${messageData.email}`);
+                            } else if (messageData.code) {
+                                // We got a code, now exchange it for tokens
+                                document.getElementById('login-result').innerHTML = `
+                                    <div class="result success">
+                                        <p>Received authorization code. Exchanging for tokens...</p>
+                                        <div class="loading"></div>
+                                    </div>
+                                `;
+                                
+                                // Set the code in the advanced tab too
+                                document.getElementById('auth-code').value = messageData.code;
+                                
+                                // Call the token exchange endpoint
+                                fetch('/api/debug/token-exchange', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ code: messageData.code })
+                                })
+                                .then(res => res.json())
+                                .then(tokenData => {
+                                    if (tokenData.success) {
+                                        // Call the test token endpoint
+                                        return fetch('/api/debug/test-token', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json'
+                                            },
+                                            body: JSON.stringify({ token: tokenData.access_token })
+                                        })
+                                        .then(res => res.json())
+                                        .then(userData => {
+                                            if (userData.success) {
+                                                showSuccess('login-result', `Successfully authenticated as ${userData.email}`, {
+                                                    name: userData.name,
+                                                    email: userData.email,
+                                                    picture: userData.picture,
+                                                    token_info: {
+                                                        access_token: `${tokenData.access_token.substring(0, 10)}...`,
+                                                        refresh_token: tokenData.refresh_token ? 'Present' : 'None',
+                                                        expires: new Date(tokenData.expiry_date).toLocaleString()
+                                                    }
+                                                });
+                                            } else {
+                                                showError('login-result', `Failed to get user info: ${userData.error}`);
+                                            }
+                                        });
+                                    } else {
+                                        showError('login-result', `Failed to exchange code for tokens: ${tokenData.error}`);
+                                    }
+                                })
+                                .catch(err => {
+                                    showError('login-result', `Error in token exchange: ${err.message}`);
+                                });
+                            }
+                        } else if (messageData.type === 'GOOGLE_AUTH_ERROR') {
+                            showError('login-result', `Authentication failed: ${messageData.error || 'Unknown error'}`);
+                        }
+                    });
+                    
+                    // Check if the popup was closed without sending a message
+                    const checkClosed = setInterval(() => {
+                        if (authWindow.closed) {
+                            clearInterval(checkClosed);
+                            
+                            // Check if result was already set
+                            const resultElement = document.getElementById('login-result');
+                            if (resultElement.innerHTML.includes('Loading')) {
+                                showError('login-result', 'Authentication window closed without completing the process.');
+                            }
+                        }
+                    }, 1000);
+                    
+                } catch (error) {
+                    showError('login-result', `Error: ${error.message}`);
+                }
+            });
+            
+            // Advanced: Get OAuth URL
+            document.getElementById('get-url').addEventListener('click', async () => {
+                try {
+                    showLoading('url-result');
+                    
+                    const response = await fetch('/api/google-auth-direct');
+                    const data = await response.json();
+                    
+                    if (data.authUrl) {
+                        const urlObj = new URL(data.authUrl);
+                        const clientId = urlObj.searchParams.get('client_id');
+                        const redirectUri = urlObj.searchParams.get('redirect_uri');
+                        
+                        document.getElementById('url-result').innerHTML = `
+                            <div class="result success">
+                                <p>Auth URL generated successfully:</p>
+                                <p><strong>Full URL:</strong> <a href="${data.authUrl}" target="_blank">${data.authUrl}</a></p>
+                                <p><strong>Client ID:</strong> ${clientId}</p>
+                                <p><strong>Redirect URI:</strong> ${redirectUri}</p>
+                                <p><strong>Authentication Status:</strong> ${data.isAuthenticated ? 'Logged in' : 'Not logged in'}</p>
+                            </div>
+                        `;
+                    } else {
+                        showError('url-result', `Failed to generate URL: ${data.error || 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    showError('url-result', `Error: ${error.message}`);
+                }
+            });
+            
+            // Advanced: Check Environment
+            document.getElementById('check-env').addEventListener('click', async () => {
+                try {
+                    showLoading('env-result');
+                    
+                    // Get environment information
+                    const envInfo = {
+                        location: window.location.href,
+                        hostname: window.location.hostname,
+                        protocol: window.location.protocol,
+                        port: window.location.port,
+                        pathname: window.location.pathname,
+                        origin: window.location.origin,
+                        headers: {
+                            userAgent: navigator.userAgent
+                        }
+                    };
+                    
+                    document.getElementById('env-result').innerHTML = `
+                        <div class="result success">
+                            <p>Environment Information:</p>
+                            <pre>${JSON.stringify(envInfo, null, 2)}</pre>
+                        </div>
+                    `;
+                } catch (error) {
+                    showError('env-result', `Error: ${error.message}`);
+                }
+            });
+            
+            // Advanced: Check Client IDs
+            document.getElementById('check-client-ids').addEventListener('click', async () => {
+                try {
+                    showLoading('client-ids-result');
+                    
+                    // Get client ID from environment
+                    const clientIdResponse = await fetch('/api/client-id-check');
+                    const clientIdData = await clientIdResponse.json();
+                    
+                    // Get auth URL to extract client ID
+                    const authUrlResponse = await fetch('/api/google-auth-direct');
+                    const authUrlData = await authUrlResponse.json();
+                    
+                    let authUrlClientId = 'Not available';
+                    if (authUrlData.authUrl) {
+                        const url = new URL(authUrlData.authUrl);
+                        authUrlClientId = url.searchParams.get('client_id') || 'Not found in URL';
+                    }
+                    
+                    // Compare the client IDs
+                    const match = clientIdData.clientId === authUrlClientId;
+                    
+                    document.getElementById('client-ids-result').innerHTML = `
+                        <div class="result ${match ? 'success' : 'error'}">
+                            <p><strong>Environment Client ID:</strong> ${clientIdData.clientId || 'Not available'}</p>
+                            <p><strong>Auth URL Client ID:</strong> ${authUrlClientId}</p>
+                            <p><strong>Match:</strong> ${match ? 'YES - Client IDs match!' : 'NO - Client IDs do not match!'}</p>
+                        </div>
+                    `;
+                } catch (error) {
+                    showError('client-ids-result', `Error: ${error.message}`);
+                }
+            });
+            
+            // Advanced: Exchange Code
+            document.getElementById('exchange-code').addEventListener('click', async () => {
+                try {
+                    const code = document.getElementById('auth-code').value.trim();
+                    
+                    if (!code) {
+                        showError('exchange-result', 'Please enter an authorization code');
+                        return;
+                    }
+                    
+                    showLoading('exchange-result');
+                    
+                    // Exchange code for tokens
+                    const response = await fetch('/api/debug/token-exchange', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ code })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        document.getElementById('exchange-result').innerHTML = `
+                            <div class="result success">
+                                <p>Code exchanged successfully!</p>
+                                <p><strong>Access Token:</strong> ${data.access_token ? `${data.access_token.substring(0, 10)}...` : 'None'}</p>
+                                <p><strong>Refresh Token:</strong> ${data.refresh_token ? 'Present' : 'None'}</p>
+                                <p><strong>Expires:</strong> ${new Date(data.expiry_date).toLocaleString()}</p>
+                                
+                                <div style="margin-top: 20px;">
+                                    <h4>Test Token:</h4>
+                                    <button id="test-token" class="btn">Get User Info</button>
+                                    <div id="test-token-result"></div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Add handler for test token button
+                        document.getElementById('test-token').addEventListener('click', async () => {
+                            try {
+                                const testTokenResult = document.getElementById('test-token-result');
+                                testTokenResult.innerHTML = '<div class="loading"></div> Testing token...';
+                                
+                                const testResponse = await fetch('/api/debug/test-token', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ token: data.access_token })
+                                });
+                                
+                                const testData = await testResponse.json();
+                                
+                                if (testData.success) {
+                                    testTokenResult.innerHTML = `
+                                        <div class="result success">
+                                            <p>Token works! User information:</p>
+                                            <p><strong>Email:</strong> ${testData.email}</p>
+                                            <p><strong>Name:</strong> ${testData.name}</p>
+                                            ${testData.picture ? `<p><strong>Picture:</strong><br><img src="${testData.picture}" width="50" style="border-radius: 50%;"></p>` : ''}
+                                        </div>
+                                    `;
+                                } else {
+                                    testTokenResult.innerHTML = `
+                                        <div class="result error">
+                                            <p>Token testing failed: ${testData.error || 'Unknown error'}</p>
+                                            ${testData.details ? `<pre>${testData.details}</pre>` : ''}
+                                        </div>
+                                    `;
+                                }
+                            } catch (testError) {
+                                testTokenResult.innerHTML = `
+                                    <div class="result error">
+                                        <p>Error testing token: ${testError.message}</p>
+                                    </div>
+                                `;
+                            }
+                        });
+                    } else {
+                        showError('exchange-result', `Failed to exchange code: ${data.error || 'Unknown error'}`);
+                        
+                        if (data.details) {
+                            document.getElementById('exchange-result').innerHTML += `
+                                <div class="result error">
+                                    <p>Error Details:</p>
+                                    <pre>${data.details}</pre>
+                                </div>
+                            `;
+                        }
+                    }
+                } catch (error) {
+                    showError('exchange-result', `Error: ${error.message}`);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google OAuth Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #4285f4;
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #4285f4;
+            margin-top: 20px;
+        }
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow: auto;
+            font-size: 13px;
+        }
+        .button {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .button:hover {
+            background: #3367d6;
+        }
+        .error {
+            color: #d50000;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #1b5e20;
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Google OAuth Diagnostic Tool</h1>
+        
+        <div class="card">
+            <h2>Environment Information</h2>
+            <div id="env-info"></div>
+            <button id="check-env" class="button">Check Environment</button>
+        </div>
+        
+        <div class="card">
+            <h2>1. Generate Auth URL</h2>
+            <p>Get a Google OAuth URL using different methods:</p>
+            <div>
+                <button id="get-url-direct" class="button">Method 1: Direct from Backend</button>
+                <button id="get-url-frontend" class="button">Method 2: Generated in Frontend</button>
+            </div>
+            <div id="auth-url-result"></div>
+        </div>
+        
+        <div class="card">
+            <h2>2. Client ID Verification</h2>
+            <p>Verify the client ID used on both the frontend and backend:</p>
+            <button id="verify-client-id" class="button">Verify Client IDs</button>
+            <div id="client-id-result"></div>
+        </div>
+
+        <div class="card">
+            <h2>3. Test Google API</h2>
+            <p>Test if we can reach Google's OAuth endpoints:</p>
+            <button id="test-google-api" class="button">Test Google API</button>
+            <div id="google-api-result"></div>
+        </div>
+        
+        <div class="card">
+            <h2>4. Custom Token Exchange</h2>
+            <p>Paste an authorization code to exchange for tokens:</p>
+            <input type="text" id="auth-code" placeholder="Paste authorization code here">
+            <button id="exchange-code" class="button">Exchange Code</button>
+            <div id="token-result"></div>
+        </div>
+        
+        <div class="card">
+            <h2>5. Full Authentication Test</h2>
+            <p>Attempt a full OAuth flow (opens a new window):</p>
+            <button id="start-oauth-flow" class="button">Start OAuth Flow</button>
+            <div id="oauth-flow-result"></div>
+        </div>
+        
+        <div class="card">
+            <h2>6. Debug Information</h2>
+            <div id="debug-info"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const appendDebugInfo = (message) => {
+                const debugInfo = document.getElementById('debug-info');
+                const timestamp = new Date().toISOString();
+                const formattedMessage = `[${timestamp}] ${message}`;
+                const messageElement = document.createElement('div');
+                messageElement.textContent = formattedMessage;
+                debugInfo.appendChild(messageElement);
+                console.log(formattedMessage);
+            };
+            
+            // 1. Check Environment
+            document.getElementById('check-env').addEventListener('click', async () => {
+                try {
+                    appendDebugInfo('Checking environment info...');
+                    const envInfo = document.getElementById('env-info');
+                    envInfo.innerHTML = 'Loading...';
+                    
+                    // Get hostname and origin
+                    const hostname = window.location.hostname;
+                    const protocol = window.location.protocol;
+                    const port = window.location.port;
+                    const origin = window.location.origin;
+                    
+                    // Try to fetch client ID from backend
+                    const clientIdResponse = await fetch('/api/client-id-check');
+                    const clientIdData = await clientIdResponse.json();
+                    
+                    envInfo.innerHTML = `
+                        <pre>
+Hostname: ${hostname}
+Protocol: ${protocol}
+Port: ${port || 'default'}
+Full Origin: ${origin}
+API Base URL: ${origin}/api
+Client ID (from backend): ${clientIdData.clientId || 'Not available'}
+Client ID present: ${!!clientIdData.clientId}
+                        </pre>
+                    `;
+                    
+                    appendDebugInfo('Environment check completed');
+                } catch (error) {
+                    document.getElementById('env-info').innerHTML = `
+                        <div class="error">Error: ${error.message}</div>
+                    `;
+                    appendDebugInfo(`Environment check error: ${error.message}`);
+                }
+            });
+
+            // 2. Generate Auth URL - Method 1: Direct from Backend
+            document.getElementById('get-url-direct').addEventListener('click', async () => {
+                try {
+                    appendDebugInfo('Fetching auth URL from backend...');
+                    const result = document.getElementById('auth-url-result');
+                    result.innerHTML = 'Loading...';
+                    
+                    const response = await fetch('/api/auth/google/url');
+                    const data = await response.json();
+                    
+                    if (data.url || data.authUrl) {
+                        const url = data.url || data.authUrl;
+                        
+                        // Extract client ID and redirect_uri for analysis
+                        const urlObj = new URL(url);
+                        const params = urlObj.searchParams;
+                        const clientId = params.get('client_id');
+                        const redirectUri = params.get('redirect_uri');
+                        
+                        result.innerHTML = `
+                            <div class="success">URL generated successfully!</div>
+                            <p><strong>Auth URL:</strong> <a href="${url}" target="_blank">Open in new window</a></p>
+                            <p><strong>Client ID:</strong> ${clientId}</p>
+                            <p><strong>Redirect URI:</strong> ${redirectUri}</p>
+                            <pre>${url}</pre>
+                        `;
+                        
+                        appendDebugInfo(`Auth URL generated with client_id: ${clientId}`);
+                        appendDebugInfo(`Redirect URI: ${redirectUri}`);
+                    } else {
+                        result.innerHTML = `
+                            <div class="error">Error: ${data.error || 'No URL returned'}</div>
+                        `;
+                        appendDebugInfo(`Error getting auth URL: ${data.error || 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    document.getElementById('auth-url-result').innerHTML = `
+                        <div class="error">Error: ${error.message}</div>
+                    `;
+                    appendDebugInfo(`Auth URL generation error: ${error.message}`);
+                }
+            });
+            
+            // 2. Generate Auth URL - Method 2: Generated in Frontend (if possible)
+            document.getElementById('get-url-frontend').addEventListener('click', async () => {
+                try {
+                    appendDebugInfo('Loading Google OAuth client...');
+                    
+                    // First, try to get the client ID
+                    const result = document.getElementById('auth-url-result');
+                    result.innerHTML = 'Loading...';
+                    
+                    const clientIdResponse = await fetch('/api/client-id-check');
+                    const clientIdData = await clientIdResponse.json();
+                    
+                    if (!clientIdData.clientId) {
+                        result.innerHTML = `
+                            <div class="error">Error: No client ID available from backend</div>
+                        `;
+                        appendDebugInfo('No client ID available from backend');
+                        return;
+                    }
+                    
+                    // This simulates using the Google OAuth client from frontend code
+                    const clientId = clientIdData.clientId;
+                    const redirectUri = `${window.location.origin}/api/auth/google/callback`;
+                    const scope = [
+                        "https://www.googleapis.com/auth/gmail.readonly",
+                        "https://www.googleapis.com/auth/gmail.send",
+                        "https://www.googleapis.com/auth/gmail.modify",
+                        "https://www.googleapis.com/auth/calendar.readonly",
+                        "https://www.googleapis.com/auth/calendar.events",
+                    ].join(' ');
+                    
+                    // Build the URL manually
+                    const baseUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
+                    const params = new URLSearchParams({
+                        client_id: clientId,
+                        redirect_uri: redirectUri,
+                        response_type: 'code',
+                        access_type: 'offline',
+                        prompt: 'consent',
+                        scope: scope
+                    });
+                    
+                    const authUrl = `${baseUrl}?${params.toString()}`;
+                    
+                    result.innerHTML = `
+                        <div class="success">URL generated successfully (frontend method)!</div>
+                        <p><strong>Auth URL:</strong> <a href="${authUrl}" target="_blank">Open in new window</a></p>
+                        <p><strong>Client ID:</strong> ${clientId}</p>
+                        <p><strong>Redirect URI:</strong> ${redirectUri}</p>
+                        <pre>${authUrl}</pre>
+                    `;
+                    
+                    appendDebugInfo(`Frontend auth URL generated with client_id: ${clientId}`);
+                    appendDebugInfo(`Frontend redirect URI: ${redirectUri}`);
+                } catch (error) {
+                    document.getElementById('auth-url-result').innerHTML = `
+                        <div class="error">Error: ${error.message}</div>
+                    `;
+                    appendDebugInfo(`Frontend auth URL generation error: ${error.message}`);
+                }
+            });
+            
+            // 3. Verify Client ID
+            document.getElementById('verify-client-id').addEventListener('click', async () => {
+                try {
+                    appendDebugInfo('Verifying client IDs...');
+                    const result = document.getElementById('client-id-result');
+                    result.innerHTML = 'Verifying...';
+                    
+                    // Get client ID from backend
+                    const clientIdResponse = await fetch('/api/client-id-check');
+                    const clientIdData = await clientIdResponse.json();
+                    
+                    // Get auth URL to extract client ID 
+                    const authUrlResponse = await fetch('/api/auth/google/url');
+                    const authUrlData = await authUrlResponse.json();
+                    
+                    let authUrlClientId = 'Not available';
+                    if (authUrlData.url || authUrlData.authUrl) {
+                        const url = new URL(authUrlData.url || authUrlData.authUrl);
+                        authUrlClientId = url.searchParams.get('client_id') || 'Not found in URL';
+                    }
+                    
+                    // Compare the client IDs
+                    const match = clientIdData.clientId === authUrlClientId;
+                    
+                    result.innerHTML = `
+                        <p><strong>Environment Client ID:</strong> ${clientIdData.clientId || 'Not available'}</p>
+                        <p><strong>Auth URL Client ID:</strong> ${authUrlClientId}</p>
+                        <p><strong>Match:</strong> ${match ? 
+                            '<span class="success">YES - Client IDs match!</span>' : 
+                            '<span class="error">NO - Client IDs do not match!</span>'}</p>
+                    `;
+                    
+                    appendDebugInfo(`Client ID verification: ${match ? 'MATCH' : 'MISMATCH'}`);
+                } catch (error) {
+                    document.getElementById('client-id-result').innerHTML = `
+                        <div class="error">Error: ${error.message}</div>
+                    `;
+                    appendDebugInfo(`Client ID verification error: ${error.message}`);
+                }
+            });
+            
+            // 4. Test Google API
+            document.getElementById('test-google-api').addEventListener('click', async () => {
+                try {
+                    appendDebugInfo('Testing Google API...');
+                    const result = document.getElementById('google-api-result');
+                    result.innerHTML = 'Testing...';
+                    
+                    // Make a simple request to Google's discovery document
+                    const response = await fetch('https://accounts.google.com/.well-known/openid-configuration');
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        result.innerHTML = `
+                            <div class="success">Successfully reached Google API!</div>
+                            <p>Status: ${response.status} ${response.statusText}</p>
+                            <p>Google OAuth endpoints:</p>
+                            <pre>
+Authorization endpoint: ${data.authorization_endpoint}
+Token endpoint: ${data.token_endpoint}
+                            </pre>
+                        `;
+                        
+                        appendDebugInfo('Google API test successful');
+                    } else {
+                        result.innerHTML = `
+                            <div class="error">Error reaching Google API</div>
+                            <p>Status: ${response.status} ${response.statusText}</p>
+                        `;
+                        appendDebugInfo(`Google API test failed: ${response.status} ${response.statusText}`);
+                    }
+                } catch (error) {
+                    document.getElementById('google-api-result').innerHTML = `
+                        <div class="error">Error: ${error.message}</div>
+                    `;
+                    appendDebugInfo(`Google API test error: ${error.message}`);
+                }
+            });
+            
+            // 5. Exchange Code
+            document.getElementById('exchange-code').addEventListener('click', async () => {
+                try {
+                    const code = document.getElementById('auth-code').value.trim();
+                    if (!code) {
+                        document.getElementById('token-result').innerHTML = `
+                            <div class="error">Please enter an authorization code</div>
+                        `;
+                        appendDebugInfo('Token exchange failed: No code provided');
+                        return;
+                    }
+                    
+                    appendDebugInfo(`Exchanging code for token (code starts with: ${code.substring(0, 5)}...)`);
+                    const result = document.getElementById('token-result');
+                    result.innerHTML = 'Exchanging code for token...';
+                    
+                    // Call our debug endpoint
+                    const response = await fetch('/api/debug/token-exchange', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ code })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        result.innerHTML = `
+                            <div class="success">Token exchange successful!</div>
+                            <p><strong>Access Token:</strong> ${data.access_token ? `${data.access_token.substring(0, 10)}...` : 'None'}</p>
+                            <p><strong>Refresh Token:</strong> ${data.refresh_token ? 'Present' : 'None'}</p>
+                            <p><strong>Expires:</strong> ${new Date(data.expiry_date).toLocaleString()}</p>
+                        `;
+                        
+                        appendDebugInfo('Token exchange successful');
+                    } else {
+                        result.innerHTML = `
+                            <div class="error">Error: ${data.error || 'Unknown error'}</div>
+                            ${data.details ? `<pre>${data.details}</pre>` : ''}
+                        `;
+                        appendDebugInfo(`Token exchange failed: ${data.error || 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    document.getElementById('token-result').innerHTML = `
+                        <div class="error">Error: ${error.message}</div>
+                    `;
+                    appendDebugInfo(`Token exchange error: ${error.message}`);
+                }
+            });
+            
+            // 6. Start OAuth Flow
+            document.getElementById('start-oauth-flow').addEventListener('click', async () => {
+                try {
+                    appendDebugInfo('Starting OAuth flow...');
+                    const result = document.getElementById('oauth-flow-result');
+                    result.innerHTML = 'Starting OAuth flow...';
+                    
+                    // Get the auth URL from backend
+                    const authUrlResponse = await fetch('/api/auth/google/url');
+                    const authUrlData = await authUrlResponse.json();
+                    
+                    if (!authUrlData.url && !authUrlData.authUrl) {
+                        result.innerHTML = `
+                            <div class="error">Error: Could not get authentication URL</div>
+                        `;
+                        appendDebugInfo('OAuth flow failed: No auth URL');
+                        return;
+                    }
+                    
+                    const authUrl = authUrlData.url || authUrlData.authUrl;
+                    appendDebugInfo(`Opening auth URL in new window: ${authUrl.substring(0, 50)}...`);
+                    
+                    // Open the auth URL in a new window
+                    const authWindow = window.open(authUrl, 'googleAuthWindow', 'width=800,height=600');
+                    
+                    // Check if the window was blocked
+                    if (!authWindow || authWindow.closed || typeof authWindow.closed === 'undefined') {
+                        result.innerHTML = `
+                            <div class="error">Popup blocked! Please allow popups for this site.</div>
+                        `;
+                        appendDebugInfo('OAuth flow error: Popup blocked');
+                        return;
+                    }
+                    
+                    // Listen for messages from the popup window
+                    window.addEventListener('message', (event) => {
+                        // Check that the message is from our app
+                        if (event.origin !== window.location.origin) {
+                            return;
+                        }
+                        
+                        const data = event.data;
+                        appendDebugInfo(`Received message from popup: ${JSON.stringify(data)}`);
+                        
+                        if (data.type === 'GOOGLE_AUTH_SUCCESS') {
+                            if (data.email) {
+                                result.innerHTML = `
+                                    <div class="success">Authentication successful!</div>
+                                    <p>Connected Google account: ${data.email}</p>
+                                `;
+                                appendDebugInfo(`OAuth flow successful: Connected ${data.email}`);
+                            } else if (data.code) {
+                                result.innerHTML = `
+                                    <div class="success">Authorization code received!</div>
+                                    <p>Code: ${data.code.substring(0, 10)}...</p>
+                                    <button id="use-received-code" class="button">Use This Code</button>
+                                `;
+                                appendDebugInfo(`OAuth flow successful: Received authorization code`);
+                                
+                                // Add event listener to the "Use This Code" button
+                                setTimeout(() => {
+                                    const useCodeButton = document.getElementById('use-received-code');
+                                    if (useCodeButton) {
+                                        useCodeButton.addEventListener('click', () => {
+                                            document.getElementById('auth-code').value = data.code;
+                                            document.getElementById('exchange-code').click();
+                                        });
+                                    }
+                                }, 100);
+                            }
+                        } else if (data.type === 'GOOGLE_AUTH_ERROR') {
+                            result.innerHTML = `
+                                <div class="error">Authentication failed: ${data.error || 'Unknown error'}</div>
+                            `;
+                            appendDebugInfo(`OAuth flow failed: ${data.error || 'Unknown error'}`);
+                        }
+                    });
+                    
+                    // Set a timeout to check if the popup is still open
+                    setTimeout(() => {
+                        if (authWindow.closed) {
+                            appendDebugInfo('OAuth window was closed without sending a message');
+                            result.innerHTML = `
+                                <div class="error">Authentication window was closed without completing the process</div>
+                            `;
+                        }
+                    }, 60000); // Check after 1 minute
+                    
+                } catch (error) {
+                    document.getElementById('oauth-flow-result').innerHTML = `
+                        <div class="error">Error: ${error.message}</div>
+                    `;
+                    appendDebugInfo(`OAuth flow error: ${error.message}`);
+                }
+            });
+            
+            // Initialize with some debug info
+            appendDebugInfo('Google OAuth Diagnostic Tool initialized');
+            appendDebugInfo(`Current location: ${window.location.href}`);
+        });
+    </script>
+</body>
+</html>

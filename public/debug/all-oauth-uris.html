@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth Redirect URI Manager</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f0f3f7;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #4285f4;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            margin-bottom: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        header p {
+            margin-top: 10px;
+            opacity: 0.9;
+            font-size: 16px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        .card-header {
+            background-color: #f9f9f9;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        h2 {
+            color: #4285f4;
+            margin-bottom: 15px;
+            font-weight: 600;
+            font-size: 22px;
+        }
+        h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        p {
+            margin-bottom: 15px;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .alert-warning {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+            color: #915400;
+        }
+        .alert-info {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            color: #0b5ba1;
+        }
+        .alert-success {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            color: #2e7d32;
+        }
+        .alert-danger {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+            color: #c62828;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #3367d6;
+        }
+        .btn-block {
+            display: block;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .btn-success {
+            background-color: #34a853;
+        }
+        .btn-success:hover {
+            background-color: #2d9249;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+        }
+        ul {
+            list-style-type: none;
+            margin-bottom: 20px;
+        }
+        .uri-item {
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.2s;
+        }
+        .uri-item:hover {
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .uri-type {
+            font-weight: bold;
+            color: #4285f4;
+            margin-bottom: 5px;
+        }
+        .uri-url {
+            font-family: 'Courier New', monospace;
+            background-color: #f0f3f7;
+            padding: 8px 12px;
+            border-radius: 4px;
+            word-break: break-all;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+        }
+        .uri-description {
+            font-size: 14px;
+            color: #666;
+        }
+        .uri-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .copy-btn {
+            display: inline-block;
+            background-color: transparent;
+            color: #4285f4;
+            border: 1px solid #4285f4;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .copy-btn:hover {
+            background-color: #4285f4;
+            color: white;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 120px;
+            background-color: rgba(0,0,0,0.8);
+            color: #fff;
+            text-align: center;
+            padding: 5px;
+            border-radius: 6px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(0,0,0,0.8) transparent transparent transparent;
+        }
+        .step-container {
+            margin-bottom: 30px;
+        }
+        .step {
+            display: flex;
+            margin-bottom: 20px;
+            align-items: flex-start;
+        }
+        .step-number {
+            background-color: #4285f4;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .step-content {
+            flex-grow: 1;
+        }
+        .step-content h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+        .status-message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .highlight {
+            background-color: #fbf8e8;
+            border-left: 4px solid #fbbc05;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .summary-box {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .uri-count {
+            font-weight: bold;
+            color: #4285f4;
+        }
+        .error-message {
+            color: #f44336;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        .success-message {
+            color: #4caf50;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Google OAuth Redirect URI Manager</h1>
+            <p>Fix 403 Forbidden errors by ensuring all your redirect URIs are registered in Google Cloud Console</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>Why You're Seeing 403 Errors</h2>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <strong>Problem:</strong> Your Google OAuth authentication is failing with a 403 Forbidden error because the redirect URI being used doesn't match what's registered in Google Cloud Console.
+                </div>
+
+                <p>When you use Google OAuth, Google checks that the redirect URI in the authentication request matches one that's pre-registered in your Google Cloud Console project. This is a security measure to prevent unauthorized redirects.</p>
+                
+                <p>Because you're using Replit, your application can be accessed through multiple different domains:</p>
+                <ul>
+                    <li>Your custom Replit subdomain (binateai.replit.dev)</li>
+                    <li>The Replit preview domain (binateai.replit.app)</li>
+                    <li>A randomly-generated domain that changes with each deployment</li>
+                </ul>
+                
+                <p>For Google OAuth to work in all environments, you need to register <strong>ALL</strong> possible redirect URIs in your Google Cloud Console project.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Solution: Register All Redirect URIs</h2>
+            </div>
+            <div class="card-body">
+                <div class="step-container">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Get Your Complete List of Redirect URIs</h3>
+                            <p>Click the button below to fetch all possible redirect URIs that your application might use:</p>
+                            <button id="fetch-uris-btn" class="btn btn-block">Fetch All Redirect URIs</button>
+                            <div id="fetch-status" class="status-message"></div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>Copy All URIs</h3>
+                            <p>Once the list is loaded, use this button to copy all URIs to your clipboard:</p>
+                            <button id="copy-all-btn" class="btn btn-success btn-block" disabled>Copy All URIs</button>
+                            <div id="copy-status" class="status-message"></div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Update Google Cloud Console</h3>
+                            <p>Go to your <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console Credentials</a> page and:</p>
+                            <ol>
+                                <li>Find your OAuth 2.0 Client ID</li>
+                                <li>Click "Edit" (pencil icon)</li>
+                                <li>Scroll down to "Authorized redirect URIs"</li>
+                                <li>Add each URI from the list below</li>
+                                <li>Click "Save"</li>
+                            </ol>
+                            <div class="alert alert-info">
+                                <strong>Note:</strong> It may take a few minutes for Google to propagate the changes across their systems.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h3>Test the Connection</h3>
+                            <p>Return to your application and try connecting to Google again.</p>
+                            <a href="/debug-links.html" class="btn">Go to Debug Links Page</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="uri-summary" class="summary-box" style="display: none;">
+                    <h3>URI Summary</h3>
+                    <p>Total URIs to register: <span id="uri-count" class="uri-count">0</span></p>
+                </div>
+
+                <div id="uri-list-container" style="display: none;">
+                    <h3>All Redirect URIs</h3>
+                    <p>Add <strong>ALL</strong> of these URIs to your Google Cloud Console:</p>
+                    <ul id="uri-list"></ul>
+                </div>
+
+                <div id="request-info" class="highlight" style="display: none;">
+                    <h3>Your Current Request Information</h3>
+                    <div id="request-info-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fetchUrisBtn = document.getElementById('fetch-uris-btn');
+            const copyAllBtn = document.getElementById('copy-all-btn');
+            const fetchStatus = document.getElementById('fetch-status');
+            const copyStatus = document.getElementById('copy-status');
+            const uriList = document.getElementById('uri-list');
+            const uriListContainer = document.getElementById('uri-list-container');
+            const uriSummary = document.getElementById('uri-summary');
+            const uriCount = document.getElementById('uri-count');
+            const requestInfo = document.getElementById('request-info');
+            const requestInfoContent = document.getElementById('request-info-content');
+
+            let redirectUris = [];
+
+            fetchUrisBtn.addEventListener('click', async function() {
+                try {
+                    // Update button state
+                    fetchUrisBtn.disabled = true;
+                    fetchUrisBtn.innerHTML = '<span class="loading"></span> Fetching URIs...';
+                    fetchStatus.textContent = '';
+                    fetchStatus.style.display = 'none';
+                    fetchStatus.className = 'status-message';
+
+                    // Fetch the URIs
+                    const response = await fetch('/api/show-all-redirect-uris');
+                    if (!response.ok) {
+                        throw new Error(`Server returned status ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    redirectUris = data.possibleRedirectURIs.map(item => item.url);
+
+                    // Update the URI count
+                    uriCount.textContent = redirectUris.length;
+                    uriSummary.style.display = 'block';
+
+                    // Clear existing items
+                    uriList.innerHTML = '';
+
+                    // Add new items
+                    data.possibleRedirectURIs.forEach(uri => {
+                        const item = document.createElement('li');
+                        item.className = 'uri-item';
+
+                        const typeEl = document.createElement('div');
+                        typeEl.className = 'uri-type';
+                        typeEl.textContent = uri.type.toUpperCase();
+
+                        const urlEl = document.createElement('div');
+                        urlEl.className = 'uri-url';
+                        urlEl.textContent = uri.url;
+
+                        const descEl = document.createElement('div');
+                        descEl.className = 'uri-description';
+                        descEl.textContent = uri.description;
+
+                        const actionsEl = document.createElement('div');
+                        actionsEl.className = 'uri-actions';
+
+                        const copyBtn = document.createElement('button');
+                        copyBtn.className = 'copy-btn';
+                        copyBtn.textContent = 'Copy URI';
+                        copyBtn.addEventListener('click', function() {
+                            navigator.clipboard.writeText(uri.url)
+                                .then(() => {
+                                    const originalText = copyBtn.textContent;
+                                    copyBtn.textContent = '✓ Copied!';
+                                    setTimeout(() => {
+                                        copyBtn.textContent = originalText;
+                                    }, 2000);
+                                })
+                                .catch(err => {
+                                    console.error('Failed to copy:', err);
+                                    copyBtn.textContent = 'Failed to copy';
+                                });
+                        });
+
+                        actionsEl.appendChild(copyBtn);
+
+                        item.appendChild(typeEl);
+                        item.appendChild(urlEl);
+                        item.appendChild(descEl);
+                        item.appendChild(actionsEl);
+
+                        uriList.appendChild(item);
+                    });
+
+                    // Show the URI container
+                    uriListContainer.style.display = 'block';
+
+                    // Enable the copy all button
+                    copyAllBtn.disabled = false;
+
+                    // Display request info
+                    requestInfoContent.innerHTML = `
+                        <p><strong>Host:</strong> ${data.current_request_info.host}</p>
+                        <p><strong>Protocol:</strong> ${data.current_request_info.protocol}</p>
+                        <p><strong>Origin:</strong> ${data.current_request_info.origin}</p>
+                    `;
+                    requestInfo.style.display = 'block';
+
+                    // Show success message
+                    fetchStatus.textContent = 'Successfully retrieved all redirect URIs!';
+                    fetchStatus.style.display = 'block';
+                    fetchStatus.classList.add('alert', 'alert-success');
+
+                } catch (error) {
+                    console.error('Error fetching redirect URIs:', error);
+                    
+                    // Show error message
+                    fetchStatus.textContent = `Error: ${error.message}`;
+                    fetchStatus.style.display = 'block';
+                    fetchStatus.classList.add('alert', 'alert-danger');
+                    
+                    // Hide containers
+                    uriListContainer.style.display = 'none';
+                    uriSummary.style.display = 'none';
+                } finally {
+                    // Reset button
+                    fetchUrisBtn.disabled = false;
+                    fetchUrisBtn.textContent = 'Fetch All Redirect URIs';
+                }
+            });
+
+            copyAllBtn.addEventListener('click', function() {
+                if (redirectUris.length === 0) {
+                    copyStatus.textContent = 'No URIs to copy!';
+                    copyStatus.style.display = 'block';
+                    copyStatus.classList.add('alert', 'alert-danger');
+                    return;
+                }
+
+                const allUris = redirectUris.join('\n');
+                
+                navigator.clipboard.writeText(allUris)
+                    .then(() => {
+                        copyStatus.textContent = `Successfully copied ${redirectUris.length} URIs to clipboard!`;
+                        copyStatus.style.display = 'block';
+                        copyStatus.classList.add('alert', 'alert-success');
+                        
+                        setTimeout(() => {
+                            copyStatus.style.display = 'none';
+                        }, 3000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy all URIs:', err);
+                        copyStatus.textContent = `Failed to copy: ${err.message}`;
+                        copyStatus.style.display = 'block';
+                        copyStatus.classList.add('alert', 'alert-danger');
+                    });
+            });
+        });
+    </script>
+</body>
+</html>

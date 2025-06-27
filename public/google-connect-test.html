@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Connect Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      color: #1a73e8;
+      margin-bottom: 30px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .info {
+      background-color: #e8f0fe;
+      border-left: 4px solid #1a73e8;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .warning {
+      background-color: #fef7e0;
+      border-left: 4px solid #fbbc04;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .success {
+      background-color: #e6f4ea;
+      border-left: 4px solid #34a853;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .error {
+      background-color: #fce8e6;
+      border-left: 4px solid #ea4335;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .flex {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    button {
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button:hover {
+      background-color: #1765cc;
+    }
+    code {
+      background: #f5f5f5;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 3px;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .status.connected {
+      background-color: #e6f4ea;
+      color: #34a853;
+    }
+    .status.disconnected {
+      background-color: #fce8e6;
+      color: #ea4335;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Google Connection Test</h1>
+    <div id="connectionStatus" class="status disconnected">
+      <span id="statusDot">●</span>
+      <span id="statusText">Disconnected</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Dynamic Redirect URI Tester</h2>
+    <p>This page demonstrates the dynamic redirect URI approach for Google OAuth authentication.</p>
+    
+    <div class="info">
+      <strong>Your current domain:</strong>
+      <pre id="currentDomain"></pre>
+      
+      <strong>Expected callback URL:</strong>
+      <pre id="callbackUrl"></pre>
+    </div>
+
+    <div class="warning">
+      <p><strong>Note:</strong> Make sure you have added the above URL to your Google Cloud Console's "Authorized redirect URIs" list.</p>
+    </div>
+
+    <button id="connectButton">Connect Google Account</button>
+  </div>
+
+  <div id="resultCard" class="card hidden">
+    <h2>Connection Result</h2>
+    <div id="resultContent"></div>
+  </div>
+
+  <div class="card">
+    <h2>How This Works</h2>
+    <p>This test uses a dynamic approach to determine the correct redirect URI based on your current domain:</p>
+    <ol>
+      <li>When you click "Connect Google Account", the system detects your current domain</li>
+      <li>The OAuth flow uses this domain to construct the callback URL</li>
+      <li>After authorization, Google calls back to this exact URL</li>
+      <li>The system uses the same dynamic URL when exchanging the code for tokens</li>
+    </ol>
+    <p>This approach solves the common "redirect_uri_mismatch" error in development environments with changing domains.</p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Display the current domain and expected callback URL
+      const currentDomain = window.location.origin;
+      document.getElementById('currentDomain').textContent = currentDomain;
+      
+      const callbackUrl = `${currentDomain}/api/auth/google/callback`;
+      document.getElementById('callbackUrl').textContent = callbackUrl;
+      
+      console.log('Browser origin:', currentDomain);
+      console.log('Expected callback URL:', callbackUrl);
+
+      // Check connection status
+      checkConnectionStatus();
+
+      // Connect button event listener
+      document.getElementById('connectButton').addEventListener('click', function() {
+        initiateOAuthFlow();
+      });
+
+      // Parse URL params for results
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('success')) {
+        showResult('success', 'Google account connected successfully! You can now use Gmail and Calendar features.');
+        checkConnectionStatus();
+      } else if (urlParams.has('error')) {
+        showResult('error', 'Error: ' + urlParams.get('error'));
+      }
+    });
+
+    function checkConnectionStatus() {
+      fetch('/api/connected-services')
+        .then(response => response.json())
+        .then(services => {
+          const googleService = services.find(s => s.service === 'google');
+          if (googleService && googleService.connected) {
+            updateConnectionStatus(true, googleService.username);
+          } else {
+            updateConnectionStatus(false);
+          }
+        })
+        .catch(error => {
+          console.error('Error checking connection status:', error);
+          updateConnectionStatus(false);
+        });
+    }
+
+    function updateConnectionStatus(isConnected, email) {
+      const statusElement = document.getElementById('connectionStatus');
+      const statusText = document.getElementById('statusText');
+      
+      if (isConnected) {
+        statusElement.className = 'status connected';
+        statusText.textContent = 'Connected: ' + email;
+      } else {
+        statusElement.className = 'status disconnected';
+        statusText.textContent = 'Disconnected';
+      }
+    }
+
+    function initiateOAuthFlow() {
+      fetch('/api/auth/google/url')
+        .then(response => response.json())
+        .then(data => {
+          console.log('Generated auth URL:', data.url);
+          window.location.href = data.url;
+        })
+        .catch(error => {
+          console.error('Error initiating OAuth flow:', error);
+          showResult('error', 'Error initiating OAuth flow: ' + error.message);
+        });
+    }
+
+    function showResult(type, message) {
+      const resultCard = document.getElementById('resultCard');
+      const resultContent = document.getElementById('resultContent');
+      
+      resultCard.classList.remove('hidden');
+      resultContent.innerHTML = `<div class="${type}">${message}</div>`;
+    }
+  </script>
+</body>
+</html>

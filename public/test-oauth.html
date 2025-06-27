@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple OAuth Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #4285f4;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 20px;
+    }
+    .btn:hover {
+      background-color: #3367d6;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .info {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #e8f0fe;
+      border-left: 4px solid #4285f4;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Simple OAuth Test</h1>
+    
+    <div class="info">
+      <p><strong>Current host:</strong> <span id="current-host"></span></p>
+      <p><strong>Base URL:</strong> <span id="base-url">Loading...</span></p>
+      <p><strong>Callback URL:</strong> <span id="callback-url">Loading...</span></p>
+      <p><strong>Authentication status:</strong> <span id="auth-status">Checking...</span></p>
+    </div>
+    
+    <button id="oauth-btn" class="btn">Connect Google Account</button>
+    <button id="disconnect-btn" class="btn" style="background-color: #ea4335;">Disconnect Google</button>
+    
+    <div style="margin-top: 20px;">
+      <h3>Response:</h3>
+      <pre id="response">No response yet</pre>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Display current hostname
+      const currentHost = window.location.hostname;
+      document.getElementById('current-host').textContent = currentHost;
+      
+      // Check auth status
+      fetch('/api/user')
+        .then(response => {
+          if (response.ok) {
+            return response.json();
+          } else {
+            throw new Error('Not authenticated');
+          }
+        })
+        .then(user => {
+          document.getElementById('auth-status').textContent = `Authenticated as ${user.username}`;
+          
+          // Check connected services
+          return fetch('/api/connected-services');
+        })
+        .then(response => response.json())
+        .then(services => {
+          const googleService = services.find(s => s.service === 'google');
+          if (googleService && googleService.connected) {
+            document.getElementById('auth-status').textContent += ' (Google Connected)';
+          } else {
+            document.getElementById('auth-status').textContent += ' (Google Not Connected)';
+          }
+        })
+        .catch(error => {
+          document.getElementById('auth-status').textContent = 'Not authenticated';
+          console.error('Auth check error:', error);
+        });
+      
+      // Get configuration
+      fetch('/api/config')
+        .then(response => response.json())
+        .then(config => {
+          document.getElementById('base-url').textContent = config.baseUrl;
+          document.getElementById('callback-url').textContent = config.google.callbackUrl;
+        })
+        .catch(error => {
+          console.error('Error fetching config:', error);
+        });
+      
+      // Connect button
+      document.getElementById('oauth-btn').addEventListener('click', function() {
+        document.getElementById('response').textContent = 'Requesting authorization URL...';
+        
+        fetch('/api/auth/google/url')
+          .then(response => response.json())
+          .then(data => {
+            if (data.url) {
+              document.getElementById('response').textContent = `Redirecting to: ${data.url}`;
+              window.location.href = data.url;
+            } else {
+              document.getElementById('response').textContent = 'Error: No authorization URL returned';
+            }
+          })
+          .catch(error => {
+            document.getElementById('response').textContent = `Error: ${error.message}`;
+          });
+      });
+      
+      // Disconnect button
+      document.getElementById('disconnect-btn').addEventListener('click', function() {
+        fetch('/api/disconnect-service/google', { 
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+          .then(response => response.json())
+          .then(data => {
+            document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+            setTimeout(() => window.location.reload(), 1000);
+          })
+          .catch(error => {
+            document.getElementById('response').textContent = `Error: ${error.message}`;
+          });
+      });
+      
+      // Check for success or error parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const success = urlParams.get('success');
+      const error = urlParams.get('error');
+      
+      if (success) {
+        document.getElementById('response').textContent = `Success: ${success}`;
+      } else if (error) {
+        document.getElementById('response').textContent = `Error: ${error}`;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Google OAuth</title>
+    <style>
+        :root {
+            --primary: #4285f4;
+            --dark-primary: #3367d6;
+            --error: #ea4335;
+            --success: #34a853;
+            --warning: #fbbc05;
+            --text: #202124;
+            --light-bg: #f8f9fa;
+            --border: #dadce0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            background-color: var(--light-bg);
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 30px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        h1 {
+            font-size: 24px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--primary);
+            text-align: center;
+        }
+        h2 {
+            font-size: 18px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: var(--text);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+        .button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin: 5px 0;
+            transition: background-color 0.2s;
+        }
+        .button:hover {
+            background-color: var(--dark-primary);
+        }
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        pre {
+            background-color: var(--light-bg);
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 14px;
+            border: 1px solid var(--border);
+            margin: 10px 0;
+        }
+        .error {
+            color: var(--error);
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid var(--error);
+            margin: 10px 0;
+        }
+        .success {
+            color: var(--success);
+            background-color: #e8f5e9;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid var(--success);
+            margin: 10px 0;
+        }
+        .warning {
+            color: #856404;
+            background-color: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid var(--warning);
+            margin: 10px 0;
+        }
+        .info {
+            color: var(--primary);
+            background-color: #e8f0fe;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid var(--primary);
+            margin: 10px 0;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            background-color: var(--light-bg);
+            font-weight: 500;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .client-id {
+            font-family: monospace;
+            word-break: break-all;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            margin-right: 5px;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary);
+            font-weight: 500;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .code-block {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin: 10px 0;
+        }
+        .steps {
+            counter-reset: step;
+            margin-left: 0;
+            padding-left: 0;
+        }
+        .step {
+            list-style-type: none;
+            position: relative;
+            padding-left: 40px;
+            margin-bottom: 20px;
+        }
+        .step::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+        }
+        .google-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            color: #737373;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            padding: 10px 15px;
+            font-weight: 500;
+            width: 240px;
+            margin: 20px auto;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .google-button:hover {
+            background-color: #f8f8f8;
+        }
+        .google-button img {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+        }
+        .field {
+            margin-bottom: 15px;
+        }
+        .field label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .field input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Google OAuth Fix Tool</h1>
+        
+        <div class="info">
+            <p>This tool helps diagnose and fix Google OAuth integration issues in Binate AI.</p>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="diagnosis">Diagnosis</div>
+            <div class="tab" data-tab="solutions">Solutions</div>
+            <div class="tab" data-tab="test">Test OAuth Flow</div>
+        </div>
+        
+        <div class="tab-content active" id="diagnosis-tab">
+            <h2>Current Configuration Diagnosis</h2>
+            
+            <div class="card">
+                <h3>OAuth Configuration Analysis</h3>
+                <div class="button-row">
+                    <button id="check-config" class="button">Check OAuth Configuration</button>
+                </div>
+                <div id="config-result"></div>
+            </div>
+            
+            <div class="card">
+                <h3>Client ID Verification</h3>
+                <div class="button-row">
+                    <button id="verify-client-id" class="button">Verify Client IDs</button>
+                </div>
+                <div id="client-id-result"></div>
+            </div>
+            
+            <div class="card">
+                <h3>Redirect URI Analysis</h3>
+                <div class="button-row">
+                    <button id="analyze-uris" class="button">Analyze Redirect URIs</button>
+                </div>
+                <div id="uri-result"></div>
+            </div>
+            
+            <div class="card">
+                <h3>Environmental Variables</h3>
+                <div class="button-row">
+                    <button id="check-env" class="button">Check Environment</button>
+                </div>
+                <div id="env-result"></div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="solutions-tab">
+            <h2>Solution Recommendations</h2>
+            
+            <div class="card">
+                <h3>Identified Issues</h3>
+                <ul>
+                    <li>Different client IDs between server and frontend</li>
+                    <li>Incorrect redirect URI configuration in Google Cloud Console</li>
+                    <li>Authentication flow issues when handling tokens</li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h3>Fix Google Cloud Console Configuration</h3>
+                <ol class="steps">
+                    <li class="step">
+                        <strong>Verify OAuth 2.0 client ID</strong>
+                        <p>Check that the client ID used in your application matches what's in the Google Cloud Console.</p>
+                        <div class="code-block" id="client-id-display">Client ID: Loading...</div>
+                    </li>
+                    <li class="step">
+                        <strong>Add Authorized JavaScript Origins</strong>
+                        <p>Add the following origins to your Google Cloud Console settings:</p>
+                        <div class="code-block" id="origins-display">Loading...</div>
+                    </li>
+                    <li class="step">
+                        <strong>Add Authorized Redirect URIs</strong>
+                        <p>Ensure these redirect URIs are registered in your Google Cloud Console:</p>
+                        <div class="code-block" id="redirects-display">Loading...</div>
+                    </li>
+                </ol>
+                <div class="button-row">
+                    <button id="load-solution-data" class="button">Load Solution Data</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Application Code Fixes</h3>
+                <ol class="steps">
+                    <li class="step">
+                        <strong>Update Environment Variables</strong>
+                        <p>Ensure the correct client ID and secret are set as environment variables.</p>
+                    </li>
+                    <li class="step">
+                        <strong>Use Dynamic Detection for Callbacks</strong>
+                        <p>Use dynamic URL detection to handle various environments:</p>
+                        <div class="code-block">
+// Use header-based detection for callback URL
+const protocol = req.headers['x-forwarded-proto'] || 'https';
+const host = req.headers.host || '';
+const callbackUrl = `${protocol}://${host}/api/auth/google/callback`;</div>
+                    </li>
+                    <li class="step">
+                        <strong>Clear Cookies on Auth Errors</strong>
+                        <p>Ensure cookies are properly cleared on authentication errors:</p>
+                        <div class="code-block">
+// Clear auth cookies on errors
+res.clearCookie('google_auth_code');
+res.clearCookie('connect.sid');</div>
+                    </li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="test-tab">
+            <h2>Test OAuth Integration</h2>
+            
+            <div class="card">
+                <h3>Direct Google Authentication</h3>
+                <p>Click the button below to test the OAuth flow directly:</p>
+                
+                <div class="google-button" id="google-login">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
+                    <span>Sign in with Google</span>
+                </div>
+                
+                <div id="login-result"></div>
+            </div>
+            
+            <div class="card">
+                <h3>Manual Testing</h3>
+                <ol class="steps">
+                    <li class="step">
+                        <strong>Get Authorization URL</strong>
+                        <div class="button-row">
+                            <button id="get-auth-url" class="button">Generate Auth URL</button>
+                        </div>
+                        <div id="auth-url-result"></div>
+                    </li>
+                    <li class="step">
+                        <strong>Exchange Authorization Code</strong>
+                        <div class="field">
+                            <label for="auth-code">Authentication Code:</label>
+                            <input type="text" id="auth-code" placeholder="Paste authorization code here">
+                        </div>
+                        <div class="button-row">
+                            <button id="exchange-code" class="button">Exchange Code</button>
+                        </div>
+                        <div id="exchange-result"></div>
+                    </li>
+                    <li class="step">
+                        <strong>Validate Access Token</strong>
+                        <div class="field">
+                            <label for="access-token">Access Token:</label>
+                            <input type="text" id="access-token" placeholder="Paste access token here">
+                        </div>
+                        <div class="button-row">
+                            <button id="test-token" class="button">Test Token</button>
+                        </div>
+                        <div id="token-result"></div>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Tab functionality
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(tc => tc.classList.remove('active'));
+                    
+                    tab.classList.add('active');
+                    const tabId = `${tab.dataset.tab}-tab`;
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Helper functions
+            const showLoading = (elementId) => {
+                const element = document.getElementById(elementId);
+                element.innerHTML = '<div class="loading"></div> Loading...';
+            };
+            
+            const showError = (elementId, message) => {
+                const element = document.getElementById(elementId);
+                element.innerHTML = `<div class="error"><p>${message}</p></div>`;
+            };
+            
+            const showSuccess = (elementId, message, data = null) => {
+                const element = document.getElementById(elementId);
+                let html = `<div class="success"><p>${message}</p>`;
+                if (data) {
+                    html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+                html += '</div>';
+                element.innerHTML = html;
+            };
+            
+            const showWarning = (elementId, message) => {
+                const element = document.getElementById(elementId);
+                element.innerHTML = `<div class="warning"><p>${message}</p></div>`;
+            };
+            
+            const showInfo = (elementId, message) => {
+                const element = document.getElementById(elementId);
+                element.innerHTML = `<div class="info"><p>${message}</p></div>`;
+            };
+            
+            // Diagnosis Tab Functions
+            
+            // Check OAuth Configuration
+            document.getElementById('check-config').addEventListener('click', async () => {
+                try {
+                    showLoading('config-result');
+                    
+                    const response = await fetch('/api/oauth-diagnostics');
+                    const data = await response.json();
+                    
+                    let configHtml = `<h4>Configuration Status</h4>`;
+                    
+                    // Check for issues
+                    const issues = [];
+                    
+                    if (!data.credentials.clientIdPresent) {
+                        issues.push('Missing Google Client ID environment variable');
+                    }
+                    
+                    if (!data.credentials.clientSecretPresent) {
+                        issues.push('Missing Google Client Secret environment variable');
+                    }
+                    
+                    // Check if dynamic URI is registered
+                    if (!data.redirectUris.dynamicUriKnown) {
+                        issues.push(`Detected callback URL "${data.redirectUris.dynamic}" is not registered in Google Cloud Console`);
+                    }
+                    
+                    // Display issues or success
+                    if (issues.length > 0) {
+                        configHtml += `<div class="error">
+                            <p><strong>Issues detected:</strong></p>
+                            <ul>
+                                ${issues.map(issue => `<li>${issue}</li>`).join('')}
+                            </ul>
+                        </div>`;
+                    } else {
+                        configHtml += `<div class="success">
+                            <p>Basic OAuth configuration looks correct!</p>
+                        </div>`;
+                    }
+                    
+                    // Add detailed configuration table
+                    configHtml += `
+                        <h4>Current Configuration</h4>
+                        <table>
+                            <tr>
+                                <th>Setting</th>
+                                <th>Value</th>
+                            </tr>
+                            <tr>
+                                <td>Client ID</td>
+                                <td class="client-id">${data.authUrls.standard.clientId}</td>
+                            </tr>
+                            <tr>
+                                <td>Configured Redirect URI</td>
+                                <td>${data.redirectUris.configured}</td>
+                            </tr>
+                            <tr>
+                                <td>Request-based URI</td>
+                                <td>${data.redirectUris.dynamic}</td>
+                            </tr>
+                            <tr>
+                                <td>Environment</td>
+                                <td>${data.environment.NODE_ENV} (Replit: ${data.environment.isReplit ? 'Yes' : 'No'})</td>
+                            </tr>
+                        </table>
+                    `;
+                    
+                    document.getElementById('config-result').innerHTML = configHtml;
+                } catch (error) {
+                    showError('config-result', `Error checking configuration: ${error.message}`);
+                }
+            });
+            
+            // Verify Client IDs
+            document.getElementById('verify-client-id').addEventListener('click', async () => {
+                try {
+                    showLoading('client-id-result');
+                    
+                    // Get client ID from environment
+                    const clientIdResponse = await fetch('/api/client-id-check');
+                    const clientIdData = await clientIdResponse.json();
+                    
+                    // Get auth URL to extract client ID
+                    const authUrlResponse = await fetch('/api/debug/google/auth');
+                    const authUrlData = await authUrlResponse.json();
+                    
+                    let authUrlClientId = 'Not available';
+                    if (authUrlData.authUrl) {
+                        const url = new URL(authUrlData.authUrl);
+                        authUrlClientId = url.searchParams.get('client_id') || 'Not found in URL';
+                    }
+                    
+                    // Also get the OAuth diagnostics data
+                    const diagResponse = await fetch('/api/oauth-diagnostics');
+                    const diagData = await diagResponse.json();
+                    
+                    // Compare the client IDs
+                    const standardMatch = clientIdData.clientId === authUrlClientId;
+                    const dynamicMatch = diagData.authUrls.dynamic.matchesEnv;
+                    
+                    let resultHtml = `<h4>Client ID Verification</h4>`;
+                    
+                    if (standardMatch && dynamicMatch) {
+                        resultHtml += `<div class="success">
+                            <p>All client IDs match correctly!</p>
+                        </div>`;
+                    } else {
+                        resultHtml += `<div class="error">
+                            <p>Client ID mismatch detected. This will cause OAuth to fail.</p>
+                        </div>`;
+                    }
+                    
+                    // Create comparison table
+                    resultHtml += `
+                        <table>
+                            <tr>
+                                <th>Source</th>
+                                <th>Client ID</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <td>Environment Variable</td>
+                                <td class="client-id">${clientIdData.clientId}</td>
+                                <td>Reference</td>
+                            </tr>
+                            <tr>
+                                <td>Standard Auth URL</td>
+                                <td class="client-id">${authUrlClientId}</td>
+                                <td>${standardMatch ? '✅ Match' : '❌ Mismatch'}</td>
+                            </tr>
+                            <tr>
+                                <td>Dynamic Auth URL</td>
+                                <td class="client-id">${diagData.authUrls.dynamic.clientId}</td>
+                                <td>${dynamicMatch ? '✅ Match' : '❌ Mismatch'}</td>
+                            </tr>
+                        </table>
+                    `;
+                    
+                    document.getElementById('client-id-result').innerHTML = resultHtml;
+                } catch (error) {
+                    showError('client-id-result', `Error verifying client IDs: ${error.message}`);
+                }
+            });
+            
+            // Analyze Redirect URIs
+            document.getElementById('analyze-uris').addEventListener('click', async () => {
+                try {
+                    showLoading('uri-result');
+                    
+                    const response = await fetch('/api/oauth-diagnostics');
+                    const data = await response.json();
+                    
+                    let resultHtml = `<h4>Redirect URI Analysis</h4>`;
+                    
+                    // Check if dynamic URI is in the known list
+                    const dynamicUriKnown = data.redirectUris.dynamicUriKnown;
+                    
+                    if (dynamicUriKnown) {
+                        resultHtml += `<div class="success">
+                            <p>Current redirect URI is properly registered in Google Cloud Console!</p>
+                        </div>`;
+                    } else {
+                        resultHtml += `<div class="error">
+                            <p>Current redirect URI is not registered in Google Cloud Console. This will cause OAuth to fail.</p>
+                        </div>`;
+                    }
+                    
+                    // Create URI table
+                    resultHtml += `
+                        <h4>Registered Redirect URIs</h4>
+                        <table>
+                            <tr>
+                                <th>URI</th>
+                                <th>Status</th>
+                            </tr>
+                    `;
+                    
+                    // Add known URIs
+                    data.redirectUris.known.forEach(uri => {
+                        const isConfigured = uri === data.redirectUris.configured;
+                        const isDynamic = uri === data.redirectUris.dynamic;
+                        
+                        resultHtml += `
+                            <tr>
+                                <td>${uri}</td>
+                                <td>${isConfigured ? '✅ Configured' : (isDynamic ? '✅ Dynamic' : '❓ Registered but not used')}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    // Add current URIs if not in the known list
+                    if (!data.redirectUris.known.includes(data.redirectUris.configured)) {
+                        resultHtml += `
+                            <tr>
+                                <td>${data.redirectUris.configured}</td>
+                                <td>❌ Configured but not registered</td>
+                            </tr>
+                        `;
+                    }
+                    
+                    if (!data.redirectUris.known.includes(data.redirectUris.dynamic) && 
+                        data.redirectUris.dynamic !== data.redirectUris.configured) {
+                        resultHtml += `
+                            <tr>
+                                <td>${data.redirectUris.dynamic}</td>
+                                <td>❌ Detected but not registered</td>
+                            </tr>
+                        `;
+                    }
+                    
+                    resultHtml += `</table>`;
+                    
+                    // Add recommendations
+                    resultHtml += `
+                        <h4>Recommendations</h4>
+                        <div class="info">
+                            <p>To fix redirect URI issues:</p>
+                            <ol>
+                                <li>Add all required URIs to Google Cloud Console OAuth settings</li>
+                                <li>Ensure the application always uses a registered URI for OAuth callback</li>
+                                <li>Check that encoded URIs match exactly what's registered</li>
+                            </ol>
+                        </div>
+                    `;
+                    
+                    document.getElementById('uri-result').innerHTML = resultHtml;
+                } catch (error) {
+                    showError('uri-result', `Error analyzing redirect URIs: ${error.message}`);
+                }
+            });
+            
+            // Check Environment
+            document.getElementById('check-env').addEventListener('click', async () => {
+                try {
+                    showLoading('env-result');
+                    
+                    const response = await fetch('/api/oauth-diagnostics');
+                    const data = await response.json();
+                    
+                    document.getElementById('env-result').innerHTML = `
+                        <h4>Environment Information</h4>
+                        <pre>${JSON.stringify(data.environment, null, 2)}</pre>
+                        
+                        <h4>Request Headers</h4>
+                        <pre>${JSON.stringify(data.requestInfo.headers, null, 2)}</pre>
+                        
+                        <div class="info">
+                            <p>The environment detection is critical for generating the correct callback URL.</p>
+                        </div>
+                    `;
+                } catch (error) {
+                    showError('env-result', `Error checking environment: ${error.message}`);
+                }
+            });
+            
+            // Solutions Tab Functions
+            
+            // Load Solution Data
+            document.getElementById('load-solution-data').addEventListener('click', async () => {
+                try {
+                    // Get client ID
+                    const clientIdResponse = await fetch('/api/client-id-check');
+                    const clientIdData = await clientIdResponse.json();
+                    
+                    // Get diagnostics data
+                    const diagResponse = await fetch('/api/oauth-diagnostics');
+                    const diagData = await diagResponse.json();
+                    
+                    // Client ID
+                    document.getElementById('client-id-display').innerText = `Client ID: ${clientIdData.clientId}`;
+                    
+                    // Origins
+                    const origins = [
+                        'https://004cd0fb-c62b-41f4-9092-516b03c6788b-00-26x1ysnxshf8q.kirk.replit.dev',
+                        'https://binateai.replit.app'
+                    ];
+                    document.getElementById('origins-display').innerText = origins.join('\n');
+                    
+                    // Redirect URIs
+                    const redirects = [
+                        'https://004cd0fb-c62b-41f4-9092-516b03c6788b-00-26x1ysnxshf8q.kirk.replit.dev/api/auth/google/callback',
+                        'https://binateai.replit.app/api/auth/google/callback'
+                    ];
+                    document.getElementById('redirects-display').innerText = redirects.join('\n');
+                    
+                    showSuccess('load-solution-data', 'Solution data loaded successfully!');
+                } catch (error) {
+                    showError('load-solution-data', `Error loading solution data: ${error.message}`);
+                }
+            });
+            
+            // Test Tab Functions
+            
+            // Direct Google Login
+            document.getElementById('google-login').addEventListener('click', async () => {
+                try {
+                    showLoading('login-result');
+                    
+                    // Get auth URL
+                    const response = await fetch('/api/google-auth-direct');
+                    const data = await response.json();
+                    
+                    if (!data.authUrl) {
+                        showError('login-result', `Failed to get auth URL: ${data.error || 'Unknown error'}`);
+                        return;
+                    }
+                    
+                    // Open OAuth popup
+                    const width = 600;
+                    const height = 700;
+                    const left = (window.innerWidth - width) / 2;
+                    const top = (window.innerHeight - height) / 2;
+                    
+                    const authWindow = window.open(
+                        data.authUrl,
+                        'googleAuth',
+                        `width=${width},height=${height},top=${top},left=${left}`
+                    );
+                    
+                    if (!authWindow) {
+                        showError('login-result', 'Popup blocked! Please allow popups for this site.');
+                        return;
+                    }
+                    
+                    // Listen for messages from popup
+                    window.addEventListener('message', async (event) => {
+                        // Check origin for security
+                        if (event.origin !== window.location.origin) {
+                            return;
+                        }
+                        
+                        const messageData = event.data;
+                        
+                        if (messageData.type === 'GOOGLE_AUTH_SUCCESS') {
+                            if (messageData.email) {
+                                showSuccess('login-result', `Successfully connected with Google account: ${messageData.email}`);
+                            } else if (messageData.code) {
+                                document.getElementById('login-result').innerHTML = `
+                                    <div class="success">
+                                        <p>Received authorization code. Exchanging for tokens...</p>
+                                        <div class="loading"></div>
+                                    </div>
+                                `;
+                                
+                                // Fill in the code in the manual testing section
+                                document.getElementById('auth-code').value = messageData.code;
+                                
+                                // Exchange code for tokens
+                                try {
+                                    const tokenResponse = await fetch('/api/debug/token-exchange', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({ code: messageData.code })
+                                    });
+                                    
+                                    const tokenData = await tokenResponse.json();
+                                    
+                                    if (tokenData.success) {
+                                        // Try to get user info
+                                        const userResponse = await fetch('/api/debug/test-token', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json'
+                                            },
+                                            body: JSON.stringify({ token: tokenData.access_token })
+                                        });
+                                        
+                                        const userData = await userResponse.json();
+                                        
+                                        if (userData.success) {
+                                            // Fill access token in manual testing
+                                            document.getElementById('access-token').value = tokenData.access_token;
+                                            
+                                            showSuccess('login-result', `Authentication successful for ${userData.email}`, {
+                                                user: {
+                                                    email: userData.email,
+                                                    name: userData.name
+                                                },
+                                                tokens: {
+                                                    access_token_prefix: tokenData.access_token.substring(0, 10) + '...',
+                                                    refresh_token: tokenData.refresh_token ? 'Received' : 'Not received',
+                                                    expires: new Date(tokenData.expiry_date).toLocaleString()
+                                                }
+                                            });
+                                        } else {
+                                            showError('login-result', `Tokens received but user info failed: ${userData.error}`);
+                                        }
+                                    } else {
+                                        showError('login-result', `Failed to exchange code for tokens: ${tokenData.error}`);
+                                    }
+                                } catch (exchangeError) {
+                                    showError('login-result', `Error during token exchange: ${exchangeError.message}`);
+                                }
+                            }
+                        } else if (messageData.type === 'GOOGLE_AUTH_ERROR') {
+                            showError('login-result', `Authentication failed: ${messageData.error || 'Unknown error'}`);
+                        }
+                    });
+                    
+                    // Check if popup was closed
+                    const checkClosed = setInterval(() => {
+                        if (authWindow.closed) {
+                            clearInterval(checkClosed);
+                            
+                            const resultElem = document.getElementById('login-result');
+                            if (resultElem.innerHTML.includes('Loading')) {
+                                showWarning('login-result', 'Authentication window was closed before completion.');
+                            }
+                        }
+                    }, 1000);
+                    
+                } catch (error) {
+                    showError('login-result', `Error initiating Google login: ${error.message}`);
+                }
+            });
+            
+            // Get Auth URL
+            document.getElementById('get-auth-url').addEventListener('click', async () => {
+                try {
+                    showLoading('auth-url-result');
+                    
+                    // Get auth URL
+                    const response = await fetch('/api/debug/google/auth');
+                    const data = await response.json();
+                    
+                    if (!data.authUrl) {
+                        showError('auth-url-result', `Failed to get auth URL: ${data.error || 'Unknown error'}`);
+                        return;
+                    }
+                    
+                    // Extract query parameters
+                    const url = new URL(data.authUrl);
+                    const clientId = url.searchParams.get('client_id');
+                    const redirectUri = url.searchParams.get('redirect_uri');
+                    const scope = url.searchParams.get('scope');
+                    
+                    document.getElementById('auth-url-result').innerHTML = `
+                        <div class="success">
+                            <p>Auth URL generated successfully!</p>
+                            <p><a href="${data.authUrl}" target="_blank">Open in new window</a></p>
+                        </div>
+                        
+                        <h4>URL Details</h4>
+                        <table>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Value</th>
+                            </tr>
+                            <tr>
+                                <td>client_id</td>
+                                <td class="client-id">${clientId}</td>
+                            </tr>
+                            <tr>
+                                <td>redirect_uri</td>
+                                <td>${redirectUri}</td>
+                            </tr>
+                            <tr>
+                                <td>scope</td>
+                                <td>${scope}</td>
+                            </tr>
+                        </table>
+                        
+                        <h4>Full URL</h4>
+                        <pre style="word-break: break-all;">${data.authUrl}</pre>
+                    `;
+                } catch (error) {
+                    showError('auth-url-result', `Error generating auth URL: ${error.message}`);
+                }
+            });
+            
+            // Exchange Code
+            document.getElementById('exchange-code').addEventListener('click', async () => {
+                try {
+                    const code = document.getElementById('auth-code').value.trim();
+                    
+                    if (!code) {
+                        showError('exchange-result', 'Please enter an authorization code');
+                        return;
+                    }
+                    
+                    showLoading('exchange-result');
+                    
+                    // Exchange code for tokens
+                    const response = await fetch('/api/debug/token-exchange', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ code })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Auto-fill the access token field
+                        document.getElementById('access-token').value = data.access_token;
+                        
+                        showSuccess('exchange-result', 'Code successfully exchanged for tokens!', {
+                            access_token: data.access_token.substring(0, 10) + '...',
+                            refresh_token: data.refresh_token ? 'Received' : 'Not received',
+                            expiry_date: new Date(data.expiry_date).toLocaleString()
+                        });
+                    } else {
+                        showError('exchange-result', `Failed to exchange code: ${data.error}`);
+                        
+                        if (data.details) {
+                            document.getElementById('exchange-result').innerHTML += `
+                                <div class="error">
+                                    <p>Error Details:</p>
+                                    <pre>${data.details}</pre>
+                                </div>
+                            `;
+                        }
+                    }
+                } catch (error) {
+                    showError('exchange-result', `Error exchanging code: ${error.message}`);
+                }
+            });
+            
+            // Test Token
+            document.getElementById('test-token').addEventListener('click', async () => {
+                try {
+                    const token = document.getElementById('access-token').value.trim();
+                    
+                    if (!token) {
+                        showError('token-result', 'Please enter an access token');
+                        return;
+                    }
+                    
+                    showLoading('token-result');
+                    
+                    // Test the token
+                    const response = await fetch('/api/debug/test-token', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ token })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        document.getElementById('token-result').innerHTML = `
+                            <div class="success">
+                                <p>Token works! Successfully retrieved user info:</p>
+                                <table>
+                                    <tr>
+                                        <th>Property</th>
+                                        <th>Value</th>
+                                    </tr>
+                                    <tr>
+                                        <td>Email</td>
+                                        <td>${data.email}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Name</td>
+                                        <td>${data.name}</td>
+                                    </tr>
+                                </table>
+                                
+                                ${data.picture ? `<p><img src="${data.picture}" width="100" style="border-radius: 50%;" alt="User profile"></p>` : ''}
+                            </div>
+                        `;
+                    } else {
+                        showError('token-result', `Token testing failed: ${data.error}`);
+                        
+                        if (data.details) {
+                            document.getElementById('token-result').innerHTML += `
+                                <div class="error">
+                                    <p>Error Details:</p>
+                                    <pre>${data.details}</pre>
+                                </div>
+                            `;
+                        }
+                    }
+                } catch (error) {
+                    showError('token-result', `Error testing token: ${error.message}`);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

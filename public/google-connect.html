@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google OAuth Direct Connect</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            color: #1a73e8;
+            margin-top: 0;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            background-color: #e2f3ff;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            padding: 12px 20px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0d62d1;
+        }
+        button:disabled {
+            background-color: #a9a9a9;
+            cursor: not-allowed;
+        }
+        .url-display {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.4;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+        .connect-btn {
+            display: block;
+            width: 100%;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #1a73e8;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .connect-btn:hover {
+            background-color: #0d62d1;
+        }
+        .spinner {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .instructions {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #1a73e8;
+            border-radius: 4px;
+        }
+        .instructions ol {
+            margin-left: 20px;
+            padding-left: 0;
+        }
+        .instructions li {
+            margin-bottom: 10px;
+        }
+        .nav-links {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .nav-link {
+            color: #1a73e8;
+            text-decoration: none;
+        }
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+        .auth-status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #6c757d;
+        }
+        .login-form {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            margin-right: 10px;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Binate AI - Google OAuth Connect</h1>
+        
+        <div class="instructions">
+            <h3>Instructions</h3>
+            <ol>
+                <li>First, make sure you're logged in to your Binate AI account</li>
+                <li>Click the "Generate Google Auth URL" button below</li>
+                <li>Click the "Connect Google Account" button to authorize Binate AI</li>
+                <li>Allow necessary permissions for Gmail and Calendar access</li>
+                <li>You'll be redirected back to this page after successful connection</li>
+            </ol>
+        </div>
+        
+        <div id="authStatus" class="auth-status">
+            Checking authentication status...
+        </div>
+        
+        <div id="loginForm" class="login-form" style="display: none;">
+            <h3>Log In to Binate AI</h3>
+            <p>You need to be logged in to connect your Google account.</p>
+            
+            <form id="loginFormEl">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="connect-btn">Log In</button>
+            </form>
+        </div>
+        
+        <div id="status" class="status loading">Waiting for action...</div>
+        
+        <button id="generateBtn" type="button">
+            Generate Google Auth URL
+        </button>
+        
+        <div id="urlContainer" style="display: none;">
+            <div class="url-display" id="urlDisplay"></div>
+            
+            <a href="#" id="connectBtn" class="connect-btn">
+                <span class="spinner" id="btnSpinner" style="display: none;"></span>
+                Connect Google Account
+            </a>
+        </div>
+        
+        <div class="nav-links">
+            <a href="/" class="nav-link">Back to Dashboard</a>
+            <a href="/settings" class="nav-link">Go to Settings</a>
+        </div>
+        
+        <div id="debugInfo" style="margin-top: 30px;">
+            <h3>Debug Information</h3>
+            <div style="font-family: monospace; font-size: 14px; background-color: #f5f5f5; padding: 10px; border-radius: 4px; white-space: pre-wrap;" id="debugOutput">
+                Host: <script>document.write(window.location.host)</script>
+                Origin: <script>document.write(window.location.origin)</script>
+                Path: <script>document.write(window.location.pathname)</script>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusDiv = document.getElementById('status');
+            const generateBtn = document.getElementById('generateBtn');
+            const urlContainer = document.getElementById('urlContainer');
+            const urlDisplay = document.getElementById('urlDisplay');
+            const connectBtn = document.getElementById('connectBtn');
+            const btnSpinner = document.getElementById('btnSpinner');
+            const debugOutput = document.getElementById('debugOutput');
+            const authStatusDiv = document.getElementById('authStatus');
+            const loginForm = document.getElementById('loginForm');
+            const loginFormEl = document.getElementById('loginFormEl');
+            
+            let authUrl = '';
+            let isAuthenticated = false;
+            
+            // Check if user is authenticated
+            async function checkAuthStatus() {
+                try {
+                    authStatusDiv.textContent = 'Checking authentication status...';
+                    
+                    const response = await fetch('/api/user', {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const userData = await response.json();
+                        isAuthenticated = true;
+                        authStatusDiv.textContent = `Logged in as: ${userData.username}`;
+                        loginForm.style.display = 'none';
+                        generateBtn.disabled = false;
+                        debugOutput.textContent += '\nAuthenticated as: ' + userData.username;
+                    } else {
+                        isAuthenticated = false;
+                        authStatusDiv.textContent = 'You are not logged in. Please log in to connect your Google account.';
+                        loginForm.style.display = 'block';
+                        generateBtn.disabled = true;
+                        debugOutput.textContent += '\nNot authenticated';
+                    }
+                } catch (error) {
+                    authStatusDiv.textContent = 'Error checking authentication status';
+                    debugOutput.textContent += '\nAuth check error: ' + error.message;
+                    console.error('Auth check error:', error);
+                }
+            }
+            
+            // Handle login form submission
+            loginFormEl.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                
+                try {
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username, password }),
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const userData = await response.json();
+                        isAuthenticated = true;
+                        authStatusDiv.textContent = `Logged in as: ${userData.username}`;
+                        loginForm.style.display = 'none';
+                        generateBtn.disabled = false;
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = 'Login successful! You can now connect your Google account.';
+                    } else {
+                        statusDiv.className = 'status error';
+                        statusDiv.textContent = 'Login failed. Please check your credentials.';
+                    }
+                } catch (error) {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Error: ' + error.message;
+                    debugOutput.textContent += '\nLogin error: ' + error.message;
+                }
+            });
+            
+            // Generate Google Auth URL
+            generateBtn.addEventListener('click', async () => {
+                try {
+                    if (!isAuthenticated) {
+                        statusDiv.className = 'status error';
+                        statusDiv.textContent = 'Please log in first to connect your Google account.';
+                        return;
+                    }
+                    
+                    statusDiv.className = 'status loading';
+                    statusDiv.textContent = 'Generating Google Auth URL...';
+                    generateBtn.disabled = true;
+                    
+                    const response = await fetch('/api/google-auth-direct');
+                    
+                    if (!response.ok) {
+                        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    authUrl = data.authUrl;
+                    
+                    urlDisplay.textContent = authUrl;
+                    connectBtn.href = authUrl;
+                    urlContainer.style.display = 'block';
+                    
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = 'Auth URL generated successfully! Click the button below to connect.';
+                    
+                    debugOutput.textContent += '\n\nResponse Data:\n' + JSON.stringify(data, null, 2);
+                    
+                } catch (error) {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Error: ' + error.message;
+                    debugOutput.textContent += '\n\nError:\n' + error.stack;
+                } finally {
+                    generateBtn.disabled = false;
+                }
+            });
+            
+            connectBtn.addEventListener('click', (e) => {
+                if (!authUrl) {
+                    e.preventDefault();
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Please generate an auth URL first.';
+                    return;
+                }
+                
+                btnSpinner.style.display = 'inline-block';
+                statusDiv.className = 'status loading';
+                statusDiv.textContent = 'Redirecting to Google authorization...';
+            });
+            
+            // Check for query parameters if returning from OAuth flow
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('success')) {
+                statusDiv.className = 'status success';
+                statusDiv.textContent = 'Google account successfully connected!';
+            } else if (urlParams.has('error')) {
+                const errorMessage = urlParams.get('error');
+                statusDiv.className = 'status error';
+                statusDiv.textContent = 'Error: ' + decodeURIComponent(errorMessage);
+                debugOutput.textContent += '\n\nError from OAuth callback:\n' + decodeURIComponent(errorMessage);
+            }
+            
+            // Check auth status on page load
+            checkAuthStatus();
+        });
+    </script>
+</body>
+</html>

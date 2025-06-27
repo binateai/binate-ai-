@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google API Diagnostic | Binate AI</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+    .container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      color: #4f46e5;
+      margin-top: 0;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #4f46e5;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 20px;
+    }
+    .btn:hover {
+      background-color: #3730a3;
+    }
+    .info {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f0f9ff;
+      border-left: 4px solid #38bdf8;
+      border-radius: 4px;
+    }
+    .error {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      border-radius: 4px;
+      display: none;
+    }
+    .success {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f0fdf4;
+      border-left: 4px solid #22c55e;
+      border-radius: 4px;
+      display: none;
+    }
+    .spinner {
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border-left-color: #4f46e5;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 5px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .loading {
+      display: none;
+    }
+    pre {
+      background-color: #f1f5f9;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 14px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .test-section {
+      padding: 20px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+    .test-result {
+      margin-top: 10px;
+      display: none;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .test-result.pass {
+      background-color: #f0fdf4;
+      border-left: 4px solid #22c55e;
+    }
+    .test-result.fail {
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+    }
+    .test-btn {
+      background-color: #4f46e5;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .test-btn:hover {
+      background-color: #3730a3;
+    }
+    .test-btn:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    .tab.active {
+      border-bottom: 2px solid #4f46e5;
+      color: #4f46e5;
+      font-weight: 500;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Google API Diagnostic</h1>
+    <p>This page will help you diagnose issues with the Google integration.</p>
+    
+    <div class="info">
+      <p><strong>Important:</strong> Make sure you're logged in to Binate AI and have attempted to connect your Google account at least once.</p>
+    </div>
+    
+    <div id="error" class="error">
+      <h3>Error</h3>
+      <p id="errorText"></p>
+    </div>
+    
+    <div id="success" class="success">
+      <h3>Success!</h3>
+      <p id="successText">Operation completed successfully.</p>
+    </div>
+    
+    <div class="tabs">
+      <div class="tab active" data-tab="connect">Connect</div>
+      <div class="tab" data-tab="diag">Diagnostics</div>
+      <div class="tab" data-tab="logs">Debug Logs</div>
+    </div>
+    
+    <div id="connect-tab" class="tab-content active">
+      <h2>Connect Google Account</h2>
+      <p>This uses a direct approach to connect your Google account with improved error handling.</p>
+      
+      <button id="connectBtn" class="btn">Connect Google Account</button>
+      <div id="connectLoading" class="loading">
+        <div class="spinner"></div> Connecting to Google...
+      </div>
+    </div>
+    
+    <div id="diag-tab" class="tab-content">
+      <h2>API Diagnostics</h2>
+      <p>Run these tests to diagnose specific issues with your Google connection:</p>
+      
+      <div class="test-section">
+        <h3>1. Check Authentication Status</h3>
+        <p>Check if you're logged in to Binate AI</p>
+        <button id="authCheckBtn" class="test-btn">Run Test</button>
+        <div id="authCheckLoading" class="loading">
+          <div class="spinner"></div> Checking...
+        </div>
+        <div id="authCheckResult" class="test-result">
+          <p id="authCheckText"></p>
+        </div>
+      </div>
+      
+      <div class="test-section">
+        <h3>2. Check Google Connection</h3>
+        <p>Check if your Google account is connected</p>
+        <button id="googleConnectionBtn" class="test-btn">Run Test</button>
+        <div id="googleConnectionLoading" class="loading">
+          <div class="spinner"></div> Checking...
+        </div>
+        <div id="googleConnectionResult" class="test-result">
+          <p id="googleConnectionText"></p>
+        </div>
+      </div>
+      
+      <div class="test-section">
+        <h3>3. Verify Access Token</h3>
+        <p>Verify that your Google access token is valid</p>
+        <button id="tokenCheckBtn" class="test-btn">Run Test</button>
+        <div id="tokenCheckLoading" class="loading">
+          <div class="spinner"></div> Checking...
+        </div>
+        <div id="tokenCheckResult" class="test-result">
+          <p id="tokenCheckText"></p>
+        </div>
+      </div>
+      
+      <div class="test-section">
+        <h3>4. Try Gmail API Access</h3>
+        <p>Attempt to access the Gmail API with your current credentials</p>
+        <button id="gmailCheckBtn" class="test-btn">Run Test</button>
+        <div id="gmailCheckLoading" class="loading">
+          <div class="spinner"></div> Checking...
+        </div>
+        <div id="gmailCheckResult" class="test-result">
+          <p id="gmailCheckText"></p>
+        </div>
+      </div>
+    </div>
+    
+    <div id="logs-tab" class="tab-content">
+      <h2>Debug Logs</h2>
+      <p>Technical information to help troubleshoot integration issues:</p>
+      
+      <pre id="debugLogs">Loading...</pre>
+      
+      <button id="refreshLogsBtn" class="test-btn">Refresh Logs</button>
+      <div id="refreshLogsLoading" class="loading">
+        <div class="spinner"></div> Refreshing...
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab
+        tab.classList.add('active');
+        const tabId = tab.getAttribute('data-tab');
+        document.getElementById(`${tabId}-tab`).classList.add('active');
+      });
+    });
+    
+    // Check for URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('success')) {
+      document.getElementById('success').style.display = 'block';
+      document.getElementById('successText').textContent = 'Google account successfully connected!';
+    } else if (urlParams.has('error')) {
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('errorText').textContent = urlParams.get('error');
+    }
+    
+    // Update debug logs
+    function updateDebugLogs() {
+      const debugInfo = {
+        page: 'google-diagnostic.html',
+        location: window.location.toString(),
+        origin: window.location.origin,
+        protocol: window.location.protocol,
+        host: window.location.host,
+        timestamp: new Date().toISOString(),
+        params: Object.fromEntries(urlParams.entries())
+      };
+      document.getElementById('debugLogs').textContent = JSON.stringify(debugInfo, null, 2);
+    }
+    
+    updateDebugLogs();
+    
+    // Connect button
+    document.getElementById('connectBtn').addEventListener('click', async function() {
+      try {
+        // Show loading
+        this.disabled = true;
+        document.getElementById('connectLoading').style.display = 'inline-block';
+        document.getElementById('error').style.display = 'none';
+        
+        // Add from=diagnostic parameter
+        const response = await fetch('/api/auth/google/url?from=diagnostic');
+        
+        if (!response.ok) {
+          throw new Error('Failed to get authentication URL');
+        }
+        
+        const data = await response.json();
+        console.log('Auth URL data:', data);
+        
+        // Update debug logs
+        const debugInfo = JSON.parse(document.getElementById('debugLogs').textContent);
+        debugInfo.authUrlResponse = data;
+        document.getElementById('debugLogs').textContent = JSON.stringify(debugInfo, null, 2);
+        
+        if (data.url) {
+          // Redirect to Google's auth page
+          window.location.href = data.url;
+        } else {
+          throw new Error('No authentication URL provided');
+        }
+      } catch (error) {
+        console.error('Error initiating Google auth:', error);
+        
+        // Hide loading, show error
+        document.getElementById('connectLoading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('errorText').textContent = error.message || 'Failed to connect to Google';
+        this.disabled = false;
+        
+        // Update debug logs with error
+        const debugInfo = JSON.parse(document.getElementById('debugLogs').textContent);
+        debugInfo.error = error.message;
+        document.getElementById('debugLogs').textContent = JSON.stringify(debugInfo, null, 2);
+      }
+    });
+    
+    // Auth Check Test
+    document.getElementById('authCheckBtn').addEventListener('click', async function() {
+      try {
+        // Show loading
+        this.disabled = true;
+        document.getElementById('authCheckLoading').style.display = 'inline-block';
+        document.getElementById('authCheckResult').className = 'test-result';
+        document.getElementById('authCheckResult').style.display = 'none';
+        
+        const response = await fetch('/api/user', {
+          credentials: 'include'
+        });
+        
+        // Update debug logs
+        const debugInfo = JSON.parse(document.getElementById('debugLogs').textContent);
+        debugInfo.authCheckStatus = response.status;
+        
+        if (response.ok) {
+          const user = await response.json();
+          debugInfo.authCheckUser = { 
+            id: user.id,
+            username: user.username,
+            email: user.email || 'not set'
+          };
+          
+          document.getElementById('authCheckResult').className = 'test-result pass';
+          document.getElementById('authCheckText').textContent = `✓ Authenticated as ${user.username} (${user.email || 'no email'})`;
+        } else {
+          document.getElementById('authCheckResult').className = 'test-result fail';
+          document.getElementById('authCheckText').textContent = `✘ Not authenticated. Status code: ${response.status}`;
+        }
+        
+        document.getElementById('debugLogs').textContent = JSON.stringify(debugInfo, null, 2);
+        document.getElementById('authCheckResult').style.display = 'block';
+      } catch (error) {
+        console.error('Auth check error:', error);
+        document.getElementById('authCheckResult').className = 'test-result fail';
+        document.getElementById('authCheckText').textContent = `✘ Error: ${error.message}`;
+        
+        // Update debug logs
+        const debugInfo = JSON.parse(document.getElementById('debugLogs').textContent);
+        debugInfo.authCheckError = error.message;
+        document.getElementById('debugLogs').textContent = JSON.stringify(debugInfo, null, 2);
+      } finally {
+        document.getElementById('authCheckLoading').style.display = 'none';
+        this.disabled = false;
+      }
+    });
+    
+    // Google Connection Test
+    document.getElementById('googleConnectionBtn').addEventListener('click', async function() {
+      try {
+        // Show loading
+        this.disabled = true;
+        document.getElementById('googleConnectionLoading').style.display = 'inline-block';
+        document.getElementById('googleConnectionResult').className = 'test-result';
+        document.getElementById('googleConnectionResult').style.display = 'none';
+        
+        const response = await fetch('/api/connected-services', {
+          credentials: 'include'
+        });
+        
+        // Update debug logs
+        const debugInfo = JSON.parse(document.getElementById('debugLogs').textContent);
+        debugInfo.googleConnectionStatus = response.status;
+        
+        if (response.ok) {
+          const services = await response.json();
+          const googleService = services.find(s => s.service === 'google');
+          
+          debugInfo.googleConnectionData = googleService || 'Not found';
+          
+          if (googleService && googleService.connected) {
+            document.getElementById('googleConnectionResult').className = 'test-result pass';
+            document.getElementById('googleConnectionText').textContent = `✓ Google account connected as ${googleService.username || 'unknown user'}`;
+          } else {
+            document.getElementById('googleConnectionResult').className = 'test-result fail';
+            document.getElementById('googleConnectionText').textContent = '✘ Google account not connected';
+          }
+        } else {
+          document.getElementById('googleConnectionResult').className = 'test-result fail';
+          document.getElementById('googleConnectionText').textContent = `✘ Failed to check connection. Status code: ${response.status}`;
+        }
+        
+        document.getElementById('debugLogs').textContent = JSON.stringify(debugInfo, null, 2);
+        document.getElementById('googleConnectionResult').style.display = 'block';
+      } catch (error) {
+        console.error('Google connection check error:', error);
+        document.getElementById('googleConnectionResult').className = 'test-result fail';
+        document.getElementById('googleConnectionText').textContent = `✘ Error: ${error.message}`;
+        
+        // Update debug logs
+        const debugInfo = JSON.parse(document.getElementById('debugLogs').textContent);
+        debugInfo.googleConnectionError = error.message;
+        document.getElementById('debugLogs').textContent = JSON.stringify(debugInfo, null, 2);
+      } finally {
+        document.getElementById('googleConnectionLoading').style.display = 'none';
+        this.disabled = false;
+      }
+    });
+    
+    // Token Check Test
+    document.getElementById('tokenCheckBtn').addEventListener('click', async function() {
+      try {
+        // Show loading
+        this.disabled = true;
+        document.getElementById('tokenCheckLoading').style.display = 'inline-block';
+        document.getElementById('tokenCheckResult').className = 'test-result';
+        document.getElementById('tokenCheckResult').style.display = 'none';
+        
+        const response = await fetch('/api/google/verify-token', {
+          credentials: 'include'
+        });
+        
+        // Update debug logs
+        const debugInfo = JSON.parse(document.getElementById('debugLogs').textContent);
+        debugInfo.tokenCheckStatus = response.status;
+        
+        const data = await response.json();
+        debugInfo.tokenCheckData = data;
+        
+        if (response.ok && data.valid) {
+          document.getElementById('tokenCheckResult').className = 'test-result pass';
+          document.getElementById('tokenCheckText').textContent = `✓ Access token is valid. Expires in ${data.expiresIn || 'unknown'} seconds.`;
+        } else {
+          document.getElementById('tokenCheckResult').className = 'test-result fail';
+          document.getElementById('tokenCheckText').textContent = `✘ Access token is invalid: ${data.message || 'Unknown error'}`;
+        }
+        
+        document.getElementById('debugLogs').textContent = JSON.stringify(debugInfo, null, 2);
+        document.getElementById('tokenCheckResult').style.display = 'block';
+      } catch (error) {
+        console.error('Token check error:', error);
+        document.getElementById('tokenCheckResult').className = 'test-result fail';
+        document.getElementById('tokenCheckText').textContent = `✘ Error: ${error.message}`;
+        
+        // Update debug logs
+        const debugInfo = JSON.parse(document.getElementById('debugLogs').textContent);
+        debugInfo.tokenCheckError = error.message;
+        document.getElementById('debugLogs').textContent = JSON.stringify(debugInfo, null, 2);
+      } finally {
+        document.getElementById('tokenCheckLoading').style.display = 'none';
+        this.disabled = false;
+      }
+    });
+    
+    // Gmail API Test
+    document.getElementById('gmailCheckBtn').addEventListener('click', async function() {
+      try {
+        // Show loading
+        this.disabled = true;
+        document.getElementById('gmailCheckLoading').style.display = 'inline-block';
+        document.getElementById('gmailCheckResult').className = 'test-result';
+        document.getElementById('gmailCheckResult').style.display = 'none';
+        
+        const response = await fetch('/api/gmail/test', {
+          credentials: 'include'
+        });
+        
+        // Update debug logs
+        const debugInfo = JSON.parse(document.getElementById('debugLogs').textContent);
+        debugInfo.gmailCheckStatus = response.status;
+        
+        const data = await response.json();
+        debugInfo.gmailCheckData = data;
+        
+        if (response.ok && data.success) {
+          document.getElementById('gmailCheckResult').className = 'test-result pass';
+          document.getElementById('gmailCheckText').textContent = `✓ Successfully accessed Gmail API. ${data.message || ''}`;
+        } else {
+          document.getElementById('gmailCheckResult').className = 'test-result fail';
+          document.getElementById('gmailCheckText').textContent = `✘ Failed to access Gmail API: ${data.error || 'Unknown error'}`;
+        }
+        
+        document.getElementById('debugLogs').textContent = JSON.stringify(debugInfo, null, 2);
+        document.getElementById('gmailCheckResult').style.display = 'block';
+      } catch (error) {
+        console.error('Gmail check error:', error);
+        document.getElementById('gmailCheckResult').className = 'test-result fail';
+        document.getElementById('gmailCheckText').textContent = `✘ Error: ${error.message}`;
+        
+        // Update debug logs
+        const debugInfo = JSON.parse(document.getElementById('debugLogs').textContent);
+        debugInfo.gmailCheckError = error.message;
+        document.getElementById('debugLogs').textContent = JSON.stringify(debugInfo, null, 2);
+      } finally {
+        document.getElementById('gmailCheckLoading').style.display = 'none';
+        this.disabled = false;
+      }
+    });
+    
+    // Refresh Logs
+    document.getElementById('refreshLogsBtn').addEventListener('click', function() {
+      updateDebugLogs();
+    });
+  </script>
+</body>
+</html>

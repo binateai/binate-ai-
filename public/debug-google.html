@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google OAuth Debug - Binate AI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a73e8;
+            margin-top: 0;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        button:hover {
+            background-color: #0d62d1;
+        }
+        pre {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .url-container {
+            word-break: break-all;
+        }
+        .debug-panel {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Google OAuth Debug Tool</h1>
+        
+        <div id="status" class="status info">
+            This tool helps with debugging Google OAuth integration issues
+        </div>
+        
+        <div class="section">
+            <h2>1. Current Environment</h2>
+            <table>
+                <tr>
+                    <th>Property</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>Host</td>
+                    <td id="host">Loading...</td>
+                </tr>
+                <tr>
+                    <td>Origin</td>
+                    <td id="origin">Loading...</td>
+                </tr>
+                <tr>
+                    <td>URL Parameters</td>
+                    <td id="url-params">None</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="section">
+            <h2>2. Authentication Status</h2>
+            <button id="check-auth">Check Authentication Status</button>
+            <div id="auth-result" class="debug-panel">
+                Not checked yet
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>3. Google OAuth Configuration</h2>
+            <button id="test-config">Test Google OAuth Config</button>
+            <button id="generate-url" style="margin-left: 10px;">Generate Auth URL</button>
+            <div id="config-result" class="debug-panel">
+                Not tested yet
+            </div>
+            <div id="url-result" class="debug-panel url-container" style="margin-top: 10px; display: none;">
+                Not generated yet
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>4. Debug Actions</h2>
+            <button id="login-button">Login to Binate AI</button>
+            <button id="goto-connect">Go to Connect Page</button>
+            <button id="goto-dashboard">Go to Dashboard</button>
+        </div>
+        
+        <div class="section">
+            <h2>5. Logs</h2>
+            <pre id="log-output">Debug logs will appear here...</pre>
+        </div>
+    </div>
+
+    <script>
+        // Simple logging function
+        function log(message) {
+            const logOutput = document.getElementById('log-output');
+            const timestamp = new Date().toLocaleTimeString();
+            logOutput.textContent += `\n[${timestamp}] ${message}`;
+            // Auto-scroll to bottom
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+        
+        // Set status message
+        function setStatus(message, type = 'info') {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+        
+        // Update environment info
+        function updateEnvironmentInfo() {
+            document.getElementById('host').textContent = window.location.host;
+            document.getElementById('origin').textContent = window.location.origin;
+            
+            // Parse URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.toString()) {
+                const paramsObj = {};
+                for (const [key, value] of urlParams.entries()) {
+                    paramsObj[key] = value;
+                }
+                document.getElementById('url-params').textContent = JSON.stringify(paramsObj, null, 2);
+                
+                // Handle common parameters
+                if (urlParams.has('error')) {
+                    setStatus(`Error: ${urlParams.get('error')}`, 'error');
+                    log(`Error parameter detected: ${urlParams.get('error')}`);
+                } else if (urlParams.has('code')) {
+                    setStatus('OAuth code detected in URL. This should be exchanged for tokens.', 'info');
+                    log(`OAuth code detected in URL: ${urlParams.get('code').substring(0, 5)}...`);
+                } else if (urlParams.has('success')) {
+                    setStatus(`Success: ${urlParams.get('success')}`, 'success');
+                    log(`Success parameter detected: ${urlParams.get('success')}`);
+                }
+            } else {
+                document.getElementById('url-params').textContent = 'None';
+            }
+        }
+        
+        // Check authentication status
+        async function checkAuthStatus() {
+            try {
+                log('Checking authentication status...');
+                const authResult = document.getElementById('auth-result');
+                authResult.textContent = 'Checking...';
+                
+                const response = await fetch('/api/user', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const userData = await response.json();
+                    authResult.textContent = JSON.stringify(userData, null, 2);
+                    setStatus(`Authenticated as: ${userData.username}`, 'success');
+                    log(`Authentication successful. Logged in as: ${userData.username}`);
+                } else {
+                    authResult.textContent = 'Not authenticated';
+                    setStatus('Not authenticated', 'info');
+                    log('Not authenticated');
+                }
+            } catch (error) {
+                document.getElementById('auth-result').textContent = `Error: ${error.message}`;
+                setStatus(`Authentication check failed: ${error.message}`, 'error');
+                log(`Authentication check error: ${error.message}`);
+            }
+        }
+        
+        // Generate Google Auth URL
+        async function generateGoogleAuthUrl() {
+            try {
+                log('Generating Google Auth URL...');
+                const urlResult = document.getElementById('url-result');
+                urlResult.textContent = 'Generating...';
+                
+                const response = await fetch('/api/google-auth-direct');
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                log(`Google Auth URL generated. Redirect URI: ${data.redirectUrl}`);
+                
+                // Create a clickable link
+                urlResult.innerHTML = `
+                    <p><strong>Auth URL:</strong></p>
+                    <p><a href="${data.authUrl}" target="_blank">${data.authUrl}</a></p>
+                    <p><strong>Redirect URI:</strong> ${data.redirectUrl}</p>
+                    <p><strong>Authenticated:</strong> ${data.isAuthenticated ? 'Yes' : 'No'}</p>
+                `;
+                
+                setStatus('Google Auth URL generated successfully', 'success');
+            } catch (error) {
+                document.getElementById('url-result').textContent = `Error: ${error.message}`;
+                setStatus(`Failed to generate Google Auth URL: ${error.message}`, 'error');
+                log(`Google Auth URL generation error: ${error.message}`);
+            }
+        }
+        
+        // Test Google OAuth Configuration
+        async function testGoogleOAuthConfig() {
+            try {
+                log('Testing Google OAuth configuration...');
+                const configResult = document.getElementById('config-result');
+                configResult.textContent = 'Testing...';
+                
+                const response = await fetch('/api/google-oauth-test');
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                log(`Google OAuth configuration test completed`);
+                
+                // Format the result as a summary
+                let summary = `<h3>Google OAuth Configuration</h3>`;
+                
+                // Environment section
+                summary += `<div style="margin-bottom: 10px;">
+                    <strong>Environment:</strong>
+                    <ul>
+                        <li>Google Client ID: ${data.environment.googleClientIdSet ? '✅ Set' : '❌ Not set'}</li>
+                        <li>Google Client Secret: ${data.environment.googleClientSecretSet ? '✅ Set' : '❌ Not set'}</li>
+                        <li>Node Environment: ${data.environment.nodeEnv}</li>
+                        <li>Running in Replit: ${data.environment.isReplit ? 'Yes' : 'No'}</li>
+                    </ul>
+                </div>`;
+                
+                // Redirect URI section
+                summary += `<div style="margin-bottom: 10px;">
+                    <strong>Redirect URI:</strong>
+                    <ul>
+                        <li>URL: ${data.redirectUri.redirectUriUsed}</li>
+                    </ul>
+                </div>`;
+                
+                // URL Generation section
+                summary += `<div style="margin-bottom: 10px;">
+                    <strong>Auth URL Test:</strong>
+                    <ul>
+                        <li>Client ID Match: ${data.urlGeneration.clientIdMatches ? '✅ Yes' : '❌ No'}</li>
+                        <li>Redirect URI Match: ${data.urlGeneration.redirectUriMatches ? '✅ Yes' : '❌ No'}</li>
+                        <li>Gmail Scope: ${data.urlGeneration.scopeIncludes.gmail ? '✅ Included' : '❌ Missing'}</li>
+                        <li>Calendar Scope: ${data.urlGeneration.scopeIncludes.calendar ? '✅ Included' : '❌ Missing'}</li>
+                        <li>Prompt Consent: ${data.urlGeneration.promptConsent ? '✅ Yes' : '❌ No'}</li>
+                    </ul>
+                </div>`;
+                
+                // Status summary
+                const allChecksPass = 
+                    data.environment.googleClientIdSet && 
+                    data.environment.googleClientSecretSet &&
+                    data.urlGeneration.clientIdMatches &&
+                    data.urlGeneration.redirectUriMatches &&
+                    data.urlGeneration.scopeIncludes.gmail &&
+                    data.urlGeneration.scopeIncludes.calendar &&
+                    data.urlGeneration.promptConsent;
+                
+                const statusClass = allChecksPass ? 'success' : 'error';
+                const statusText = allChecksPass ? 
+                    'All configuration checks passed! ✅' : 
+                    'Some configuration checks failed. Please review the issues above. ❌';
+                
+                summary += `<div class="status ${statusClass}" style="margin-top: 15px;">
+                    ${statusText}
+                </div>`;
+                
+                // Set the results and show them
+                configResult.innerHTML = summary;
+                
+                // Show the URL generation section as well
+                document.getElementById('url-result').style.display = 'block';
+                setStatus('Google OAuth configuration test completed', allChecksPass ? 'success' : 'warning');
+                
+                // If all checks pass, suggest generating the auth URL
+                if (allChecksPass) {
+                    log('All configuration checks passed. You can now generate the auth URL.');
+                } else {
+                    log('Some configuration checks failed. Please review the issues.');
+                }
+            } catch (error) {
+                document.getElementById('config-result').textContent = `Error: ${error.message}`;
+                setStatus(`Failed to test Google OAuth configuration: ${error.message}`, 'error');
+                log(`Google OAuth test error: ${error.message}`);
+            }
+        }
+        
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Debug tool initialized');
+            updateEnvironmentInfo();
+            
+            // Set up event listeners
+            document.getElementById('check-auth').addEventListener('click', checkAuthStatus);
+            document.getElementById('generate-url').addEventListener('click', () => {
+                generateGoogleAuthUrl();
+                document.getElementById('url-result').style.display = 'block';
+            });
+            document.getElementById('test-config').addEventListener('click', testGoogleOAuthConfig);
+            document.getElementById('login-button').addEventListener('click', () => {
+                log('Navigating to login page...');
+                window.location.href = '/auth';
+            });
+            document.getElementById('goto-connect').addEventListener('click', () => {
+                log('Navigating to Google Connect page...');
+                window.location.href = '/google-connect.html';
+            });
+            document.getElementById('goto-dashboard').addEventListener('click', () => {
+                log('Navigating to dashboard...');
+                window.location.href = '/';
+            });
+            
+            // Automatically check auth status on page load
+            checkAuthStatus();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Google Account - Binate AI</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --background: #f9fafb;
+            --card-bg: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background-color: var(--card-bg);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background-color: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            flex-grow: 1;
+        }
+        
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            color: var(--text);
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+        }
+        
+        h2 {
+            color: var(--text);
+            font-size: 1.4rem;
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+        
+        p {
+            margin-bottom: 1.5rem;
+            color: var(--text-light);
+        }
+        
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            font-size: 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            border: none;
+            gap: 0.5rem;
+        }
+        
+        .button-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .button-primary:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .button-outline {
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        
+        .button-outline:hover {
+            background-color: var(--background);
+        }
+        
+        .status {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .status-info {
+            background-color: #e0f2fe;
+            border: 1px solid #bae6fd;
+            color: #0369a1;
+        }
+        
+        .status-success {
+            background-color: #dcfce7;
+            border: 1px solid #bbf7d0;
+            color: #16a34a;
+        }
+        
+        .status-error {
+            background-color: #fee2e2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+        }
+        
+        .status-warning {
+            background-color: #fef3c7;
+            border: 1px solid #fde68a;
+            color: #b45309;
+        }
+        
+        .icon {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .step {
+            display: flex;
+            margin-bottom: 1.5rem;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex-grow: 1;
+        }
+        
+        .step.step-active .step-number {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .step.step-completed .step-number {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .debug-panel {
+            background-color: #f1f5f9;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 0.875rem;
+            color: var(--text);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+        
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--text-light);
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .loader {
+            border: 3px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            border-top: 3px solid var(--primary);
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .footer {
+            margin-top: auto;
+            background-color: var(--card-bg);
+            padding: 1rem 2rem;
+            text-align: center;
+            font-size: 0.875rem;
+            color: var(--text-light);
+            border-top: 1px solid var(--border);
+        }
+        
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .permission-list {
+            margin-bottom: 1.5rem;
+        }
+        
+        .permission-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .permission-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border-radius: 6px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        
+        .permission-content h3 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        .permission-content p {
+            margin: 0;
+            font-size: 0.875rem;
+        }
+        
+        /* Responsive */
+        @media (max-width: 640px) {
+            .header {
+                padding: 1rem;
+            }
+            
+            .container {
+                padding: 0 0.5rem;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="logo">
+            <div class="logo-icon">B</div>
+            <span>Binate AI</span>
+        </a>
+        <div>
+            <a href="/auth" class="button button-outline">Login</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h1>Connect Your Google Account</h1>
+            
+            <div id="auth-status" class="status status-info">
+                Checking authentication status...
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" data-tab="main">Main</div>
+                <div class="tab" data-tab="permissions">Permissions</div>
+                <div class="tab" data-tab="troubleshooting">Troubleshooting</div>
+            </div>
+            
+            <div class="tab-content active" data-tab-content="main">
+                <h2>Connect Google to Binate AI</h2>
+                <p>
+                    Connect your Google account to enable Binate AI to access your emails and calendar. 
+                    This allows the AI assistant to manage your emails, schedule meetings, and provide 
+                    intelligent insights based on your communication and schedule.
+                </p>
+                
+                <div class="step step-active" id="step-1">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Authenticate with Binate AI</h3>
+                        <p>You need to be logged in to Binate AI before connecting your Google account.</p>
+                        <button id="login-button" class="button button-outline">Login to Binate AI</button>
+                    </div>
+                </div>
+                
+                <div class="step" id="step-2">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Connect Google Account</h3>
+                        <p>
+                            Click the button below to connect your Google account. You'll be redirected 
+                            to Google's authentication page where you can grant Binate AI permission to 
+                            access your Gmail and Google Calendar.
+                        </p>
+                        <button id="connect-button" class="button button-primary" disabled>
+                            Connect Google Account
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="step" id="step-3">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Start Using Binate AI</h3>
+                        <p>
+                            Once connected, go to your dashboard to experience the full capabilities 
+                            of Binate AI with your Google account integration.
+                        </p>
+                        <a href="/" class="button button-outline" id="dashboard-button" style="display: none;">
+                            Go to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" data-tab-content="permissions">
+                <h2>Permissions Required</h2>
+                <p>
+                    Binate AI requires the following permissions to provide you with the best 
+                    assistant experience. Your data is private and secure.
+                </p>
+                
+                <div class="permission-list">
+                    <div class="permission-item">
+                        <div class="permission-icon">📧</div>
+                        <div class="permission-content">
+                            <h3>Gmail Access</h3>
+                            <p>Read, send, and manage your emails to provide email assistance, follow-ups, and lead detection.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="permission-item">
+                        <div class="permission-icon">📅</div>
+                        <div class="permission-content">
+                            <h3>Calendar Access</h3>
+                            <p>Create and manage calendar events to help schedule meetings and provide meeting preparation.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="permission-item">
+                        <div class="permission-icon">👤</div>
+                        <div class="permission-content">
+                            <h3>Profile Information</h3>
+                            <p>Access your basic profile information to personalize the Binate AI experience.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="status status-info">
+                    <strong>Your data is private and secure.</strong> Binate AI only accesses what's needed to provide you with assistance and does not share your data with third parties.
+                </div>
+            </div>
+            
+            <div class="tab-content" data-tab-content="troubleshooting">
+                <h2>Troubleshooting</h2>
+                
+                <div class="status status-warning">
+                    If you're having trouble connecting your Google account, try the steps below.
+                </div>
+                
+                <h3>Common Issues</h3>
+                <ul>
+                    <li>Make sure you're logged in to Binate AI first</li>
+                    <li>Ensure you're selecting the correct Google account</li>
+                    <li>Check that you're accepting all the required permissions</li>
+                    <li>Clear your browser cookies and try again</li>
+                    <li>Try using a different browser</li>
+                </ul>
+                
+                <h3>Connection Status</h3>
+                <div id="connection-status" class="debug-panel">
+                    Checking connection status...
+                </div>
+                
+                <div class="actions">
+                    <button id="check-connection" class="button button-outline">
+                        Check Connection Status
+                    </button>
+                    <button id="debug-button" class="button button-outline">
+                        Open Debug Tool
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>© 2025 Binate AI. All rights reserved.</p>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching functionality
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs and content
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    tab.classList.add('active');
+                    const tabName = tab.getAttribute('data-tab');
+                    document.querySelector(`[data-tab-content="${tabName}"]`).classList.add('active');
+                });
+            });
+            
+            // Check authentication status
+            checkAuthStatus();
+            
+            // Set up event listeners
+            document.getElementById('login-button').addEventListener('click', () => {
+                window.location.href = '/auth';
+            });
+            
+            document.getElementById('connect-button').addEventListener('click', connectGoogle);
+            
+            document.getElementById('check-connection').addEventListener('click', checkConnectionStatus);
+            
+            document.getElementById('debug-button').addEventListener('click', () => {
+                window.location.href = '/debug-google.html';
+            });
+            
+            // Check connection status on load
+            checkConnectionStatus();
+        });
+        
+        // Check authentication status
+        async function checkAuthStatus() {
+            const authStatus = document.getElementById('auth-status');
+            const step1 = document.getElementById('step-1');
+            const step2 = document.getElementById('step-2');
+            const connectButton = document.getElementById('connect-button');
+            
+            try {
+                const response = await fetch('/api/user', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    authStatus.className = 'status status-success';
+                    authStatus.innerHTML = `<strong>Authenticated as ${user.username}</strong><br>You can now connect your Google account.`;
+                    
+                    // Update steps
+                    step1.classList.remove('step-active');
+                    step1.classList.add('step-completed');
+                    step2.classList.add('step-active');
+                    
+                    // Enable connect button
+                    connectButton.disabled = false;
+                    
+                    // Check if Google is already connected
+                    checkConnectionStatus();
+                } else {
+                    authStatus.className = 'status status-warning';
+                    authStatus.innerHTML = `<strong>Not logged in</strong><br>Please log in to Binate AI first before connecting Google.`;
+                }
+            } catch (error) {
+                authStatus.className = 'status status-error';
+                authStatus.innerHTML = `<strong>Error checking authentication</strong><br>${error.message}`;
+            }
+        }
+        
+        // Connect Google account
+        async function connectGoogle() {
+            const connectButton = document.getElementById('connect-button');
+            connectButton.disabled = true;
+            connectButton.innerHTML = '<span class="loader"></span> Connecting...';
+            
+            try {
+                const response = await fetch('/api/google-auth-direct');
+                const data = await response.json();
+                
+                if (data.authUrl) {
+                    // Redirect to Google auth URL
+                    window.location.href = data.authUrl;
+                } else {
+                    throw new Error('Failed to generate Google auth URL');
+                }
+            } catch (error) {
+                const authStatus = document.getElementById('auth-status');
+                authStatus.className = 'status status-error';
+                authStatus.innerHTML = `<strong>Error connecting to Google</strong><br>${error.message}`;
+                
+                connectButton.disabled = false;
+                connectButton.textContent = 'Connect Google Account';
+            }
+        }
+        
+        // Check Google connection status
+        async function checkConnectionStatus() {
+            const connectionStatus = document.getElementById('connection-status');
+            connectionStatus.textContent = 'Checking connection status...';
+            
+            const step2 = document.getElementById('step-2');
+            const step3 = document.getElementById('step-3');
+            const dashboardButton = document.getElementById('dashboard-button');
+            const connectButton = document.getElementById('connect-button');
+            
+            try {
+                const response = await fetch('/api/user/connected-services', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const services = await response.json();
+                    const googleService = services.find(service => service.service === 'google');
+                    
+                    if (googleService && googleService.connected) {
+                        // Google is connected
+                        connectionStatus.textContent = JSON.stringify(googleService, null, 2);
+                        
+                        const authStatus = document.getElementById('auth-status');
+                        authStatus.className = 'status status-success';
+                        authStatus.innerHTML = `<strong>Google account connected!</strong><br>Your Google account is successfully connected to Binate AI.`;
+                        
+                        // Update steps
+                        step2.classList.remove('step-active');
+                        step2.classList.add('step-completed');
+                        step3.classList.add('step-active');
+                        
+                        // Update buttons
+                        connectButton.textContent = 'Reconnect Google Account';
+                        dashboardButton.style.display = 'inline-flex';
+                    } else {
+                        // Google is not connected
+                        connectionStatus.textContent = 'Google account is not connected.';
+                    }
+                } else {
+                    connectionStatus.textContent = 'Error checking connection status. You might not be logged in.';
+                }
+            } catch (error) {
+                connectionStatus.textContent = `Error checking connection status: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

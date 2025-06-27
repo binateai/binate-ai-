@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google OAuth Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4285F4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px 0;
+        }
+        button:hover {
+            background-color: #3367D6;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Google OAuth Debug</h1>
+        
+        <div id="status" class="status info">Loading debug tool...</div>
+        
+        <h2>1. Test Authentication</h2>
+        <button id="check-auth">Check Auth Status</button>
+        <pre id="auth-result">Click to check authentication status</pre>
+        
+        <h2>2. Test Google OAuth</h2>
+        <button id="get-auth-url">Get Auth URL</button>
+        <pre id="auth-url-result">Click to generate auth URL</pre>
+        
+        <h2>3. Go to Pages</h2>
+        <button id="go-dashboard">Dashboard</button>
+        <button id="go-login">Login</button>
+        <button id="go-connect">Google Connect</button>
+    </div>
+    
+    <script>
+        // Add event listeners when the DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('status').textContent = 'Debug tool loaded successfully';
+            
+            // Check authentication status
+            document.getElementById('check-auth').addEventListener('click', async function() {
+                const resultElement = document.getElementById('auth-result');
+                resultElement.textContent = 'Checking...';
+                
+                try {
+                    const response = await fetch('/api/user', {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const userData = await response.json();
+                        resultElement.textContent = JSON.stringify(userData, null, 2);
+                        document.getElementById('status').textContent = 'Logged in as: ' + userData.username;
+                        document.getElementById('status').className = 'status success';
+                    } else {
+                        resultElement.textContent = 'Not authenticated: ' + response.status;
+                        document.getElementById('status').textContent = 'Not logged in';
+                        document.getElementById('status').className = 'status error';
+                    }
+                } catch (error) {
+                    resultElement.textContent = 'Error: ' + error.message;
+                    document.getElementById('status').textContent = 'Error checking auth';
+                    document.getElementById('status').className = 'status error';
+                }
+            });
+            
+            // Get Google Auth URL
+            document.getElementById('get-auth-url').addEventListener('click', async function() {
+                const resultElement = document.getElementById('auth-url-result');
+                resultElement.textContent = 'Generating...';
+                
+                try {
+                    const response = await fetch('/api/google-auth-direct');
+                    const data = await response.json();
+                    
+                    if (data.authUrl) {
+                        resultElement.innerHTML = `
+                            <p><strong>Auth URL:</strong></p>
+                            <p><a href="${data.authUrl}" target="_blank">${data.authUrl}</a></p>
+                            <p><strong>Redirect URI:</strong> ${data.redirectUrl}</p>
+                        `;
+                    } else {
+                        resultElement.textContent = 'Error: ' + (data.error || 'No auth URL returned');
+                    }
+                } catch (error) {
+                    resultElement.textContent = 'Error: ' + error.message;
+                }
+            });
+            
+            // Navigation buttons
+            document.getElementById('go-dashboard').addEventListener('click', function() {
+                window.location.href = '/';
+            });
+            
+            document.getElementById('go-login').addEventListener('click', function() {
+                window.location.href = '/auth';
+            });
+            
+            document.getElementById('go-connect').addEventListener('click', function() {
+                window.location.href = '/google-connect-new.html';
+            });
+        });
+    </script>
+</body>
+</html>

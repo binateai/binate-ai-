@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google OAuth Debug Links</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2 {
+            color: #1a73e8;
+        }
+        .info-box {
+            background-color: #e8f0fe;
+            border-left: 4px solid #1a73e8;
+            padding: 12px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .warning-box {
+            background-color: #fff3e0;
+            border-left: 4px solid #f57c00;
+            padding: 12px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        code {
+            font-family: monospace;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+        .button-container {
+            margin: 20px 0;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .log-error {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        .log-success {
+            color: #388e3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Google OAuth Debug Links</h1>
+    
+    <div class="info-box">
+        <p>This page provides direct links to test the Google OAuth flow with various configurations.</p>
+    </div>
+    
+    <div class="warning-box">
+        <h2>⚠️ 403 Error Fix</h2>
+        <p><strong>Are you seeing 403 Forbidden errors with Google Auth?</strong> This happens because the redirect URIs don't match what's registered in Google Cloud Console.</p>
+        <p><a href="/debug/all-oauth-uris.html" style="display: block; background-color: #f57c00; color: white; text-align: center; padding: 10px; border-radius: 4px; margin-top: 10px; text-decoration: none; font-weight: bold;">Fix 403 Errors: Register All Redirect URIs</a></p>
+    </div>
+
+    <h2>URL Information</h2>
+    <table>
+        <tr>
+            <th>URL Component</th>
+            <th>Value</th>
+        </tr>
+        <tr>
+            <td>Current Origin</td>
+            <td id="current-origin"></td>
+        </tr>
+        <tr>
+            <td>Host</td>
+            <td id="current-host"></td>
+        </tr>
+        <tr>
+            <td>Protocol</td>
+            <td id="current-protocol"></td>
+        </tr>
+        <tr>
+            <td>Full URL</td>
+            <td id="full-url"></td>
+        </tr>
+    </table>
+    
+    <div class="warning-box">
+        <p><strong>Important:</strong> For OAuth to work, this URL needs to be added to the authorized redirect URIs in your Google Cloud Console.</p>
+        <p>Currently, the following URL should be authorized: <code>https://binateai.replit.dev/api/auth/google/callback</code></p>
+        <p>The actual URL detected from this browser is: <code id="detected-callback-url"></code></p>
+    </div>
+
+    <h2>Test Authentication With Different Configurations</h2>
+    <div class="button-container">
+        <button id="test-dynamic-detection">Test With Dynamic Detection</button>
+        <button id="test-explicit-origin">Test With Explicit Origin</button>
+        <button id="test-default-config">Test With Default Config</button>
+    </div>
+
+    <h2>Direct Backend Debug</h2>
+    <div class="button-container">
+        <button id="auth-test-button">Test Auth Configuration</button>
+    </div>
+
+    <div id="log-container">
+        <h2>Debug Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Populate URL information
+            const origin = window.location.origin;
+            const host = window.location.host;
+            const protocol = window.location.protocol;
+            const fullUrl = window.location.href;
+
+            document.getElementById('current-origin').textContent = origin;
+            document.getElementById('current-host').textContent = host;
+            document.getElementById('current-protocol').textContent = protocol;
+            document.getElementById('full-url').textContent = fullUrl;
+            
+            // Set the detected callback URL
+            const callbackUrl = `${origin}/api/auth/google/callback`;
+            document.getElementById('detected-callback-url').textContent = callbackUrl;
+
+            // Add log entry
+            function log(message, type = 'info') {
+                const logContainer = document.getElementById('log');
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type === 'error' ? 'log-error' : type === 'success' ? 'log-success' : ''}`;
+                const timestamp = new Date().toLocaleTimeString();
+                entry.textContent = `${timestamp}: ${message}`;
+                logContainer.prepend(entry);
+            }
+
+            // Test with dynamic detection (no query parameters)
+            document.getElementById('test-dynamic-detection').addEventListener('click', async function() {
+                try {
+                    log('Testing with dynamic detection...');
+                    // Use the special debug endpoint that doesn't require authentication
+                    const response = await fetch('/api/debug/google/auth');
+                    
+                    if (!response.ok) {
+                        throw new Error(`Backend responded with status ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!data.authUrl) {
+                        throw new Error('No authorization URL returned from backend');
+                    }
+                    
+                    log(`Got auth URL: ${data.authUrl.substring(0, 50)}...`);
+                    log(`Detected origin: ${data.requestInfo.detectedOrigin}`);
+                    log(`Host header: ${data.requestInfo.headers.host}`);
+                    log('Redirecting to Google consent screen...', 'success');
+                    
+                    window.location.href = data.authUrl;
+                } catch (error) {
+                    log(`Error: ${error.message}`, 'error');
+                    console.error('OAuth error:', error);
+                }
+            });
+
+            // Test with explicit origin as query parameter
+            document.getElementById('test-explicit-origin').addEventListener('click', async function() {
+                try {
+                    const explicitOrigin = window.location.origin;
+                    log(`Testing with explicit origin: ${explicitOrigin}`);
+                    
+                    // Pass the origin explicitly in the query parameter to the debug endpoint
+                    const response = await fetch(`/api/debug/google/auth?origin=${encodeURIComponent(explicitOrigin)}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Backend responded with status ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!data.authUrl) {
+                        throw new Error('No authorization URL returned from backend');
+                    }
+                    
+                    log(`Got auth URL: ${data.authUrl.substring(0, 50)}...`);
+                    log(`Explicit origin: ${explicitOrigin}`);
+                    log(`Query params: ${JSON.stringify(data.requestInfo.query)}`);
+                    log('Redirecting to Google consent screen...', 'success');
+                    
+                    window.location.href = data.authUrl;
+                } catch (error) {
+                    log(`Error: ${error.message}`, 'error');
+                    console.error('OAuth error:', error);
+                }
+            });
+
+            // Test with default configuration (force it to use the configured values)
+            document.getElementById('test-default-config').addEventListener('click', async function() {
+                try {
+                    log('Testing with default configuration...');
+                    
+                    // Add a parameter that tells the backend to use the default config
+                    const response = await fetch('/api/debug/google/auth?useDefault=true');
+                    
+                    if (!response.ok) {
+                        throw new Error(`Backend responded with status ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!data.authUrl) {
+                        throw new Error('No authorization URL returned from backend');
+                    }
+                    
+                    log(`Got auth URL: ${data.authUrl.substring(0, 50)}...`);
+                    log(`Using default config - detected origin: ${data.requestInfo.detectedOrigin}`);
+                    log(`Config parameter: ${data.requestInfo.query.useDefault}`);
+                    log('Redirecting to Google consent screen...', 'success');
+                    
+                    window.location.href = data.authUrl;
+                } catch (error) {
+                    log(`Error: ${error.message}`, 'error');
+                    console.error('OAuth error:', error);
+                }
+            });
+
+            // Test auth configuration
+            document.getElementById('auth-test-button').addEventListener('click', async function() {
+                try {
+                    log('Testing auth configuration...', 'info');
+                    
+                    const response = await fetch('/api/debug/google/test');
+                    
+                    if (!response.ok) {
+                        throw new Error(`Backend responded with status ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    log('Auth configuration test result:', 'success');
+                    console.log('Auth configuration test result:', data);
+                    
+                    // Format and display the result
+                    const formatResult = (obj) => {
+                        return Object.entries(obj)
+                            .map(([key, value]) => {
+                                if (typeof value === 'object' && value !== null) {
+                                    return `${key}: ${JSON.stringify(value)}`;
+                                }
+                                return `${key}: ${value}`;
+                            })
+                            .join('\n');
+                    };
+                    
+                    if (data.environment) {
+                        log(`Environment Check:\n${formatResult(data.environment)}`, 'info');
+                    }
+                    
+                    if (data.redirectUri) {
+                        log(`Redirect URI Test:\n${formatResult(data.redirectUri)}`, 'info');
+                    }
+                    
+                    if (data.urlGeneration) {
+                        log(`URL Comparison Test:\n${formatResult(data.urlGeneration)}`, 'info');
+                        
+                        if (data.urlGeneration.redirectUriMatches) {
+                            log('✅ Redirect URIs match between default and dynamic methods', 'success');
+                        } else {
+                            log('❌ Redirect URIs DO NOT match between default and dynamic methods', 'error');
+                            log(`Default: ${data.urlGeneration.defaultRedirectUri}`, 'error');
+                            log(`Dynamic: ${data.urlGeneration.dynamicRedirectUri}`, 'error');
+                        }
+                    }
+                    
+                    log(`Test completed at: ${data.timestamp}`, 'info');
+                    
+                } catch (error) {
+                    log(`Error: ${error.message}`, 'error');
+                    console.error('Auth test error:', error);
+                }
+            });
+
+            // Check for response parameters in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('code')) {
+                log(`Authorization code received: ${urlParams.get('code').substring(0, 10)}...`, 'success');
+            }
+            if (urlParams.has('error')) {
+                log(`Error from Google: ${urlParams.get('error')}`, 'error');
+                if (urlParams.has('error_description')) {
+                    log(`Error description: ${urlParams.get('error_description')}`, 'error');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

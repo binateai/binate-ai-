@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google OAuth External Test | Binate AI</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      margin-bottom: 20px;
+      flex: 1;
+    }
+    h1 {
+      color: #6366f1;
+      margin-top: 0;
+      font-weight: 700;
+    }
+    h2 {
+      color: #4f46e5;
+      font-weight: 600;
+      margin-top: 1.5em;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #6366f1;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: background-color 0.2s;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 20px;
+    }
+    .btn:hover {
+      background-color: #4f46e5;
+    }
+    .info {
+      margin-top: 30px;
+      padding: 20px;
+      background-color: #f0f9ff;
+      border-left: 4px solid #38bdf8;
+      border-radius: 4px;
+    }
+    .error {
+      margin-top: 30px;
+      padding: 20px;
+      background-color: #fef2f2;
+      border-left: 4px solid #ef4444;
+      border-radius: 4px;
+      display: none;
+    }
+    .success {
+      margin-top: 30px;
+      padding: 20px;
+      background-color: #f0fdf4;
+      border-left: 4px solid #22c55e;
+      border-radius: 4px;
+      display: none;
+    }
+    code {
+      background-color: #f1f5f9;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .loader {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+    }
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border-left-color: #6366f1;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .debug-section {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px dashed #ccc;
+    }
+    .debug-info {
+      background-color: #f8fafc;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Google OAuth External Test</h1>
+    <p>This page will help you connect your Google account to Binate AI. This external page is used to avoid cross-origin restrictions.</p>
+    
+    <div class="info">
+      <p><strong>Why this page?</strong> Google OAuth doesn't work in iframes due to security restrictions. This standalone page lets you complete the authentication flow properly.</p>
+    </div>
+    
+    <div id="errorMessage" class="error">
+      <h3>Error</h3>
+      <p id="errorText"></p>
+    </div>
+    
+    <div id="successMessage" class="success">
+      <h3>Success!</h3>
+      <p>Your Google account was successfully connected to Binate AI.</p>
+      <p>You can now close this window and return to the application.</p>
+    </div>
+    
+    <div id="loader" class="loader">
+      <div class="spinner"></div>
+      <p>Preparing authentication...</p>
+    </div>
+    
+    <button id="connectButton" class="btn">Connect Google Account</button>
+    
+    <div class="debug-section">
+      <h2>Debug Information</h2>
+      <p>This information is helpful for troubleshooting if you encounter issues:</p>
+      <div id="debugInfo" class="debug-info">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    // Update debug info immediately
+    document.addEventListener('DOMContentLoaded', function() {
+      const debugInfo = {
+        page: 'oauth-external-test.html',
+        location: window.location.toString(),
+        origin: window.location.origin,
+        host: window.location.host,
+        href: window.location.href,
+        timestamp: new Date().toISOString()
+      };
+      
+      document.getElementById('debugInfo').textContent = JSON.stringify(debugInfo, null, 2);
+    });
+    
+    // Handle button click
+    document.getElementById('connectButton').addEventListener('click', async function() {
+      // Show loader
+      document.getElementById('loader').style.display = 'block';
+      document.getElementById('connectButton').disabled = true;
+      
+      try {
+        // Fetch dynamic Google auth URL from the backend
+        const response = await fetch('/api/auth/google/url', {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to get authentication URL');
+        }
+        
+        const data = await response.json();
+        
+        // Update debug info with response
+        const debugInfo = document.getElementById('debugInfo');
+        const currentDebugInfo = JSON.parse(debugInfo.textContent);
+        currentDebugInfo.authUrlResponse = data;
+        debugInfo.textContent = JSON.stringify(currentDebugInfo, null, 2);
+        
+        // Log data for debugging
+        console.log('Auth URL data:', data);
+        
+        if (data.url) {
+          // Redirect to Google's OAuth page
+          window.location.href = data.url;
+        } else {
+          throw new Error('No authentication URL provided');
+        }
+      } catch (error) {
+        console.error('Error starting Google auth:', error);
+        
+        // Hide loader
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('connectButton').disabled = false;
+        
+        // Show error message
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        errorText.textContent = error.message || 'Failed to connect to Google. Please try again.';
+        errorMessage.style.display = 'block';
+        
+        // Update debug info with error
+        const debugInfo = document.getElementById('debugInfo');
+        const currentDebugInfo = JSON.parse(debugInfo.textContent);
+        currentDebugInfo.error = error.message || String(error);
+        debugInfo.textContent = JSON.stringify(currentDebugInfo, null, 2);
+      }
+    });
+    
+    // Check for URL parameters that might indicate success or error
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('success')) {
+      document.getElementById('successMessage').style.display = 'block';
+      document.getElementById('connectButton').style.display = 'none';
+    } else if (urlParams.has('error')) {
+      const errorMessage = document.getElementById('errorMessage');
+      const errorText = document.getElementById('errorText');
+      errorText.textContent = urlParams.get('error');
+      errorMessage.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

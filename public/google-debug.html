@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google OAuth Debug Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            color: #1a73e8;
+            margin-top: 0;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #e2f3ff;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            padding: 12px 20px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0d62d1;
+        }
+        button:disabled {
+            background-color: #a9a9a9;
+            cursor: not-allowed;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .json-display {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            border: 1px solid #ddd;
+        }
+        .flex-row {
+            display: flex;
+            gap: 20px;
+        }
+        .flex-column {
+            flex: 1;
+        }
+        .nav-links {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .nav-link {
+            color: #1a73e8;
+            text-decoration: none;
+        }
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        table th {
+            background-color: #f5f5f5;
+        }
+        .url-display {
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Google OAuth Debug Tool</h1>
+        
+        <div id="status" class="status info">
+            This tool helps debug Google OAuth integration issues
+        </div>
+        
+        <div class="section">
+            <h2>Environment Information</h2>
+            <div class="flex-row">
+                <div class="flex-column">
+                    <h3>Request Details</h3>
+                    <table id="requestInfo">
+                        <tr>
+                            <th>Property</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr>
+                            <td>Origin</td>
+                            <td id="origin"></td>
+                        </tr>
+                        <tr>
+                            <td>Host</td>
+                            <td id="host"></td>
+                        </tr>
+                        <tr>
+                            <td>Protocol</td>
+                            <td id="protocol"></td>
+                        </tr>
+                        <tr>
+                            <td>URL</td>
+                            <td id="fullUrl" class="url-display"></td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="flex-column">
+                    <h3>URL Parameters</h3>
+                    <div id="urlParams" class="json-display">No parameters detected</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Google API Configuration Test</h2>
+            <button id="testButton">Test Google OAuth Configuration</button>
+            <div id="testResults" class="json-display" style="margin-top: 10px;">
+                No test results yet
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Auth Status</h2>
+            <button id="checkAuthButton">Check Authentication Status</button>
+            <div id="authResults" class="json-display" style="margin-top: 10px;">
+                No authentication data
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Quick Actions</h2>
+            <div class="flex-row">
+                <div class="flex-column">
+                    <button id="generateAuthUrlButton">Generate Auth URL</button>
+                    <div id="authUrlResult" class="json-display" style="margin-top: 10px; overflow-wrap: anywhere;">
+                        No URL generated yet
+                    </div>
+                </div>
+                <div class="flex-column">
+                    <button id="openLoginButton">Open Login Page</button>
+                    <button id="googleConnectButton" style="margin-top: 10px;">Open Google Connect Page</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="nav-links">
+            <a href="/" class="nav-link">Back to Dashboard</a>
+            <a href="/google-connect.html" class="nav-link">Go to Google Connect</a>
+            <a href="/settings" class="nav-link">Go to Settings</a>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusDiv = document.getElementById('status');
+            const testButton = document.getElementById('testButton');
+            const testResults = document.getElementById('testResults');
+            const checkAuthButton = document.getElementById('checkAuthButton');
+            const authResults = document.getElementById('authResults');
+            const generateAuthUrlButton = document.getElementById('generateAuthUrlButton');
+            const authUrlResult = document.getElementById('authUrlResult');
+            const urlParams = document.getElementById('urlParams');
+            const openLoginButton = document.getElementById('openLoginButton');
+            const googleConnectButton = document.getElementById('googleConnectButton');
+            
+            // Display environment information
+            document.getElementById('origin').textContent = window.location.origin;
+            document.getElementById('host').textContent = window.location.host;
+            document.getElementById('protocol').textContent = window.location.protocol;
+            document.getElementById('fullUrl').textContent = window.location.href;
+            
+            // Parse URL parameters
+            const params = new URLSearchParams(window.location.search);
+            if (params.toString()) {
+                const paramsObj = {};
+                for (const [key, value] of params.entries()) {
+                    paramsObj[key] = value;
+                }
+                urlParams.textContent = JSON.stringify(paramsObj, null, 2);
+                
+                // Check for errors or success
+                if (params.has('error')) {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Error: ' + decodeURIComponent(params.get('error'));
+                } else if (params.has('success')) {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = 'Success: ' + decodeURIComponent(params.get('success'));
+                } else if (params.has('code')) {
+                    statusDiv.className = 'status info';
+                    statusDiv.textContent = 'Authorization code detected in URL. This should only appear temporarily during the OAuth flow.';
+                }
+            }
+            
+            // Test Google OAuth configuration
+            testButton.addEventListener('click', async () => {
+                try {
+                    testButton.disabled = true;
+                    testResults.textContent = 'Testing...';
+                    
+                    const response = await fetch('/api/google-auth-direct');
+                    const data = await response.json();
+                    
+                    testResults.textContent = JSON.stringify(data, null, 2);
+                    
+                    if (data.authConfigured) {
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = 'Google OAuth configuration test successful';
+                    } else {
+                        statusDiv.className = 'status error';
+                        statusDiv.textContent = 'Google OAuth configuration test failed: ' + (data.error || 'Unknown error');
+                    }
+                } catch (error) {
+                    testResults.textContent = 'Error: ' + error.message;
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Google OAuth configuration test failed: ' + error.message;
+                } finally {
+                    testButton.disabled = false;
+                }
+            });
+            
+            // Check authentication status
+            checkAuthButton.addEventListener('click', async () => {
+                try {
+                    checkAuthButton.disabled = true;
+                    authResults.textContent = 'Checking...';
+                    
+                    const response = await fetch('/api/user', {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const userData = await response.json();
+                        authResults.textContent = JSON.stringify(userData, null, 2);
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = 'Authenticated as: ' + userData.username;
+                    } else {
+                        authResults.textContent = 'Not authenticated';
+                        statusDiv.className = 'status info';
+                        statusDiv.textContent = 'Not authenticated';
+                    }
+                } catch (error) {
+                    authResults.textContent = 'Error: ' + error.message;
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Authentication check failed: ' + error.message;
+                } finally {
+                    checkAuthButton.disabled = false;
+                }
+            });
+            
+            // Generate Auth URL
+            generateAuthUrlButton.addEventListener('click', async () => {
+                try {
+                    generateAuthUrlButton.disabled = true;
+                    authUrlResult.textContent = 'Generating...';
+                    
+                    const response = await fetch('/api/google-auth-direct');
+                    const data = await response.json();
+                    
+                    authUrlResult.innerHTML = `
+                        <a href="${data.authUrl}" target="_blank" style="word-break: break-all;">${data.authUrl}</a>
+                        <p style="margin-top: 10px"><strong>Redirect URL:</strong> ${data.redirectUrl}</p>
+                    `;
+                    
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = 'Auth URL generated successfully';
+                } catch (error) {
+                    authUrlResult.textContent = 'Error: ' + error.message;
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Failed to generate Auth URL: ' + error.message;
+                } finally {
+                    generateAuthUrlButton.disabled = false;
+                }
+            });
+            
+            // Open login page
+            openLoginButton.addEventListener('click', () => {
+                window.location.href = '/auth';
+            });
+            
+            // Open Google Connect page
+            googleConnectButton.addEventListener('click', () => {
+                window.location.href = '/google-connect.html';
+            });
+            
+            // Automatically check auth status on page load
+            checkAuthButton.click();
+        });
+    </script>
+</body>
+</html>

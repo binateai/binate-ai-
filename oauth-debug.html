@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Binate AI - OAuth Debug Tool</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <!-- Domain Redirect Helper - Shows a warning if on temporary domain -->
+  <script type="text/javascript" src="/js/domain-redirect.js"></script>
+  <style>
+    .card {
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .btn-primary {
+      background-color: #4f46e5;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .btn-primary:hover {
+      background-color: #4338ca;
+    }
+    .url-display {
+      background-color: #f3f4f6;
+      border-radius: 4px;
+      padding: 12px;
+      margin: 8px 0;
+      font-family: monospace;
+      overflow-x: auto;
+      word-break: break-all;
+    }
+    .debug-info {
+      background-color: #f8fafc;
+      border-radius: 4px;
+      padding: 12px;
+      margin-top: 16px;
+      border-left: 4px solid #3b82f6;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="container mx-auto px-4 py-8">
+    <header class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Binate AI - OAuth Debug Tool</h1>
+      <p class="text-gray-600">Test Google OAuth integration with fixed redirect URIs</p>
+    </header>
+
+    <div class="card">
+      <h2 class="text-xl font-semibold mb-4">Google OAuth Status</h2>
+      <div class="debug-info">
+        <p><strong>Base URL:</strong> <span id="base-url">Loading...</span></p>
+        <p><strong>Callback URL:</strong> <span id="callback-url">Loading...</span></p>
+        <p><strong>Authentication Status:</strong> <span id="auth-status">Loading...</span></p>
+        <p><strong>Current Host:</strong> <span id="current-host">Loading...</span></p>
+        <p class="text-red-500 font-bold hidden" id="domain-warning">You are on a temporary domain. OAuth will only work on the main domain.</p>
+      </div>
+      
+      <div class="mt-6">
+        <button id="google-connect-btn" class="btn-primary">Connect Google Account</button>
+        <button id="direct-domain-btn" class="btn-primary ml-2 bg-green-600 hover:bg-green-700">Go to Main Domain</button>
+        <button id="disconnect-btn" class="btn-primary ml-2 bg-red-600 hover:bg-red-700">Disconnect</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="text-xl font-semibold mb-4">OAuth Callback URL Configuration</h2>
+      <p class="mb-2">Ensure these URIs are added to Google Cloud Console:</p>
+      <div class="url-display">https://binateai.replit.dev/api/auth/google/callback</div>
+      <div class="url-display">https://binateai.replit.app/api/auth/google/callback</div>
+      <div class="url-display">https://*.replit.dev/api/auth/google/callback</div>
+      
+      <div class="mt-4">
+        <p class="text-sm text-gray-600">Note: The fixed callback URL approach ensures OAuth works across domain refreshes.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="text-xl font-semibold mb-4">API Response</h2>
+      <pre id="api-response" class="bg-gray-800 text-green-400 p-4 rounded overflow-x-auto">No API responses yet</pre>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check and display current domain information
+      const currentHost = window.location.hostname;
+      const mainDomain = 'workspace.binateai25.repl.co';
+      document.getElementById('current-host').textContent = currentHost;
+      
+      // Show warning if on temporary domain
+      if (currentHost !== mainDomain && currentHost.includes('replit')) {
+        document.getElementById('domain-warning').classList.remove('hidden');
+      }
+      
+      // Direct domain button
+      document.getElementById('direct-domain-btn').addEventListener('click', function() {
+        const mainUrl = `https://${mainDomain}${window.location.pathname}${window.location.search}`;
+        window.location.href = mainUrl;
+      });
+      
+      // Get the query parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const success = urlParams.get('success');
+      const error = urlParams.get('error');
+      
+      // Update UI based on query parameters
+      if (success) {
+        document.getElementById('api-response').textContent = `Success: ${success}`;
+      } else if (error) {
+        document.getElementById('api-response').textContent = `Error: ${error}`;
+      }
+      
+      // Check user authentication status
+      fetch('/api/user')
+        .then(response => {
+          if (response.ok) {
+            return response.json();
+          } else {
+            throw new Error('Not authenticated');
+          }
+        })
+        .then(user => {
+          document.getElementById('auth-status').textContent = `Authenticated as ${user.username}`;
+          
+          // Check connected services
+          return fetch('/api/connected-services');
+        })
+        .then(response => response.json())
+        .then(services => {
+          const googleService = services.find(s => s.service === 'google');
+          if (googleService && googleService.connected) {
+            document.getElementById('auth-status').textContent += ' (Google Connected)';
+          } else {
+            document.getElementById('auth-status').textContent += ' (Google Not Connected)';
+          }
+        })
+        .catch(error => {
+          document.getElementById('auth-status').textContent = 'Not authenticated';
+        });
+      
+      // Get base URL and callback URL from the server (for display only)
+      fetch('/api/config')
+        .then(response => response.json())
+        .then(config => {
+          document.getElementById('base-url').textContent = config.baseUrl;
+          document.getElementById('callback-url').textContent = config.google.callbackUrl;
+        })
+        .catch(error => {
+          console.error('Error fetching config:', error);
+        });
+      
+      // Connect Google button
+      document.getElementById('google-connect-btn').addEventListener('click', function() {
+        // CRITICAL FIX: If we're on a temporary Replit domain, redirect to the main domain first
+        const currentHost = window.location.hostname;
+        const mainDomain = 'workspace.binateai25.repl.co';
+        
+        if (currentHost !== mainDomain && currentHost.includes('replit')) {
+          // We're on a temporary domain - show warning and redirect to the main domain
+          const warningMessage = `You're on a temporary domain (${currentHost}). Redirecting to the main domain (${mainDomain}) for OAuth...`;
+          document.getElementById('api-response').textContent = warningMessage;
+          
+          // Redirect to the main domain with the same path
+          const mainUrl = `https://${mainDomain}${window.location.pathname}${window.location.search}`;
+          window.location.href = mainUrl;
+          return;
+        }
+        
+        // We're on the correct domain, proceed with OAuth
+        fetch('/api/auth/google/url')
+          .then(response => response.json())
+          .then(data => {
+            if (data.url) {
+              document.getElementById('api-response').textContent = `Redirecting to: ${data.url}`;
+              window.location.href = data.url;
+            } else {
+              document.getElementById('api-response').textContent = 'Error: No authorization URL returned';
+            }
+          })
+          .catch(error => {
+            document.getElementById('api-response').textContent = `Error: ${error.message}`;
+          });
+      });
+      
+      // Disconnect button
+      document.getElementById('disconnect-btn').addEventListener('click', function() {
+        fetch('/api/disconnect-service/google', { 
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+          .then(response => response.json())
+          .then(data => {
+            document.getElementById('api-response').textContent = JSON.stringify(data, null, 2);
+            setTimeout(() => window.location.reload(), 1000);
+          })
+          .catch(error => {
+            document.getElementById('api-response').textContent = `Error: ${error.message}`;
+          });
+      });
+    });
+  </script>
+</body>
+</html>

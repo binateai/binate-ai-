@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google OAuth Redirect URI Helper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: #fff;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #4285f4;
+            margin-top: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .uri {
+            background-color: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        .special-uri {
+            background-color: #e8f0fe;
+            border: 1px solid #4285f4;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 15px 0;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .instructions {
+            background-color: #fff;
+            border-left: 4px solid #4285f4;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .error {
+            color: #d32f2f;
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #388e3c;
+            background-color: #e8f5e9;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #3367d6;
+        }
+        .copy-btn {
+            background-color: #34a853;
+        }
+        .copy-btn:hover {
+            background-color: #2e8b57;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 15px 0;
+            border: 1px solid #ffeeba;
+        }
+    </style>
+</head>
+<body>
+    <h1>Google OAuth Redirect URI Helper</h1>
+    
+    <div class="container">
+        <div class="warning">
+            <strong>Important:</strong> Detecting the current domain from your browser may not always work correctly on Replit. The URI below is based on your server configuration.
+        </div>
+        
+        <h2>Required Google OAuth Redirect URI</h2>
+        <p>You need to add this <strong>exact</strong> redirect URI to your Google OAuth client in Google Cloud Console:</p>
+        <div class="special-uri" id="fixed-redirect-uri">https://004cd0fb-c62b-41f4-9092-516b03c6788b-00-26x1ysnxshf8q.kirk.replit.dev/api/auth/google/callback</div>
+        <button class="copy-btn" onclick="copyFixedRedirectUri()">Copy Redirect URI</button>
+        
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Copy the redirect URI above</li>
+                <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a></li>
+                <li>Find your OAuth 2.0 Client ID and click "Edit"</li>
+                <li>Under "Authorized redirect URIs", click "ADD URI"</li>
+                <li>Paste the redirect URI and click "SAVE"</li>
+            </ol>
+        </div>
+        
+        <h2>Current Browser Domain Info</h2>
+        <p>This is the domain information detected from your browser:</p>
+        <div class="uri" id="current-domain"></div>
+    </div>
+    
+    <div class="container">
+        <h2>Additional Redirect URIs to Add</h2>
+        <p>For the application to work in all environments, also add these URIs:</p>
+        
+        <h3>Production URLs:</h3>
+        <div class="uri">https://binateai.com/api/auth/google/callback</div>
+        <div class="uri">https://www.binateai.com/api/auth/google/callback</div>
+        <div class="uri">https://binateai.replit.app/api/auth/google/callback</div>
+        
+        <h3>Development URLs:</h3>
+        <div class="uri">https://workspace.binateai25.repl.co/api/auth/google/callback</div>
+    </div>
+    
+    <div class="container">
+        <h2>Verifying Your Google Client ID</h2>
+        <p>Make sure you're using this Client ID in your Google Cloud Console:</p>
+        <div class="uri">558691718410-ur0hg6dfde5eotcvkoftu96tkbj5mmn6.apps.googleusercontent.com</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentDomain = window.location.origin;
+            document.getElementById('current-domain').textContent = currentDomain;
+        });
+        
+        function copyFixedRedirectUri() {
+            const text = document.getElementById('fixed-redirect-uri').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Redirect URI copied to clipboard!');
+            }).catch(err => {
+                console.error('Could not copy text: ', err);
+            });
+        }
+    </script>
+</body>
+</html>
